@@ -2,7 +2,8 @@
 #define _TYPES_H_
 
 #include <fstream>
-
+#include <unordered_map>
+#include <vector>
 static const int MAX_ELEMENT_COUNT = 1000;
 
 struct ProgramOptions final
@@ -17,6 +18,7 @@ struct ProgramOptions final
 
 };
 
+typedef std::unordered_map<int, std::vector<double>> CentroidsType ;
 
 
 #endif

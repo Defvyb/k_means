@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     if(!getProgramOptions(argc, argv, options)) return -1;
 
     KMeans means(options);
-    std::unordered_map<int, std::vector<double>> centroids;
+    CentroidsType centroids;
     means.clustering(centroids);
 
 	return 0;

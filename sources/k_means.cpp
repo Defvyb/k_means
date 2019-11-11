@@ -1,13 +1,16 @@
 #include <k_means.h>
 #include <parser.hpp>
 #include <math.h>
-bool KMeans::clustering(std::unordered_map<int, std::vector<double>> & centroids) noexcept
+#include <almost_equal_gtest.hpp>
+
+bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
     if(!inspectFile()) return false;
     if(!initCentroids(centroids)) return false;
     if(!doClustering(centroids)) return false;
 }
 
+//TODO: remove inspecting
 bool KMeans::inspectFile() noexcept
 {
     m_options.fstream.seekg(0, std::ios::beg);
@@ -27,13 +30,27 @@ bool KMeans::inspectFile() noexcept
     return true;
 }
 
-bool KMeans::initCentroids(std::unordered_map<int, std::vector<double>> & centroids) noexcept
+//TODO: initCentroids without inspecting
+bool KMeans::initCentroids(CentroidsType & centroids) noexcept
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
+    int iterations = m_options.maxIterations;
+
     for(uint16_t i=0; i < m_options.klusterCentroidsCount; i++)
     {
-        centroids[rand()%(m_lineCount+1)] = std::vector<double>();
+        iterations = m_options.maxIterations;
+        while(iterations)
+        {
+            int val = rand()%(m_lineCount+1);
+            if(centroids.find(val) == centroids.end())
+            {
+                centroids[val] = std::vector<double>();
+                break;
+            }
+            iterations--;
+        }
+
     }
 
     m_options.fstream.clear();
@@ -66,7 +83,7 @@ static bool compute(std::vector<double> & pointDimensions, std::vector<double> &
     for(;pointDim != pointDimensions.end() && centerDim != centerDimentions.end();
         ++pointDim, ++centerDim)
     {
-        sumOfPow += pow((pointDim - centerDim),2.0);
+        sumOfPow += pow((*pointDim - *centerDim),2.0);
     }
     result = sqrt(sumOfPow);
 
@@ -83,102 +100,141 @@ static bool compute(std::vector<double> & pointDimensions, std::vector<double> &
     return true;
 }
 
+void KMeans::initCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+                              const CentroidsType & centroids) noexcept
+{
+    for(auto centroid: centroids)
+    {
+        centroidsSum[centroid.first].first = centroid.second;
+        centroidsSum[centroid.first].second = 1;
+    }
+}
 
-bool KMeans::doClustering(std::unordered_map<int, std::vector<double>> & centroids) noexcept
+void KMeans::moveCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+                      CentroidsType & centroids) noexcept
+{
+    for(auto & centroid: centroids)
+    {
+        auto centroidSumDimension = centroidsSum[centroid.first].first.cbegin();
+        auto centroidDimension = centroid.second.begin();
+
+        for(; centroidSumDimension != centroidsSum[centroid.first].first.cend() &&
+              centroidDimension != centroid.second.end();
+            ++centroidSumDimension, ++centroidDimension)
+        {
+            *centroidDimension = *centroidSumDimension / centroidsSum[centroid.first].second;
+        }
+
+    }
+}
+
+bool KMeans::calcCentroids(char * lineBuf,
+                           std::vector<double> & curPointBuf,
+                           CentroidsType & centroids,
+                           std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, m_options.fstream.beg);
-    char line[MAX_LINE_LENGTH];
+    int lineNum = 0;
+
+    initCentroids(centroidsSum, centroids);
+    while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
+    {
+        lineNum++;
+        curPointBuf.clear();
+        if(parsePoint(lineBuf, curPointBuf))
+        {
+            double minDist = pow(10,10);
+            double curDist = 0;
+            int foundCentroid = centroids.begin()->first;
+
+            for(auto centroid = centroids.begin(); centroid != centroids.end(); ++centroid)
+            {
+                if(compute(curPointBuf, centroid->second, curDist))
+                {
+                    if (curDist < minDist)
+                    {
+                        minDist = curDist;
+                        foundCentroid = centroid->first;
+                    }
+                }
+                else
+                {
+                    std::cerr << "failed to compute centroids line: " << lineNum << " text: " << lineBuf <<"\n";
+                    return false;
+                }
+            }
+
+            auto centrDim = centroidsSum[foundCentroid].first.begin();
+            auto pointDim = curPointBuf.begin();
+
+            for(;centrDim != centroidsSum[foundCentroid].first.end() &&
+                pointDim != curPointBuf.end();
+                ++centrDim, ++pointDim)
+            {
+                *centrDim += *pointDim;
+            }
+            centroidsSum[foundCentroid].second++;
+        }
+        else
+        {
+            std::cerr << "failed to parse point, line: " << lineNum << " text: " << lineBuf <<"\n";
+            return false;
+        }
+    }
+    moveCentroids(centroidsSum, centroids);
+    return true;
+}
+
+
+bool KMeans::doClustering(CentroidsType & centroids) noexcept
+{
+    char lineBuf[MAX_LINE_LENGTH];
 
     std::vector<double> curPoint;
     curPoint.reserve(1000);
 
-    while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
+    CentroidsType centroidsNext;
+    centroidsNext.reserve(centroids.size());
+
+    int iterations = m_options.maxIterations;
+
+    std::unordered_map<int, std::pair<std::vector<double>, double>> centroidsSum;
+    while(true)
     {
-        curPoint.clear();
-        if(parsePoint(line, curPoint))
+        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum)) return false;
+        centroidsNext = centroids;
+        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum)) return false;
+
+        iterations--;
+        if(!iterations) break;
+        if(centroidsEqual(centroids, centroidsNext))
         {
-            double minDist = pow(10,10);
-            double curDist = 0;
-            int foundCentroid = centroids.begin()->first;
-
-            for(auto centroid = centroids.begin(); centroid != centroids.end(); ++centroid)
-            {
-                if(compute(curPoint, centroid->second, curDist))
-                {
-                    if (curDist < minDist)
-                    {
-                        minDist = curDist;
-                        foundCentroid = centroid->first;
-                    }
-                }
-                else
-                {
-                    std::cerr << "failed to compute centroids, line: " << line << "\n";
-                    return false;
-                }
-            }
-
-            auto centrDim = centroids[foundCentroid].begin();
-            auto pointDim = curPoint.begin();
-
-            for(;centrDim != centroids[foundCentroid].end() &&
-                pointDim != curPoint.end();
-                ++centrDim, ++pointDim)
-            {
-                *centrDim = ((*centrDim+*pointDim) / 2.0);
-            }
+            centroids = centroidsNext;
+            break;
         }
         else
         {
-             std::cerr << "failed to parse point, line: " << line << "\n";
-             return false;
+            centroids = centroidsNext;
         }
     }
+    return true;
+}
 
-    m_options.fstream.clear();
-    m_options.fstream.seekg(0, m_options.fstream.beg);
+bool KMeans::centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept
+{
+    auto centroid = centroidsObjects.begin();
+    auto centroidNext = centroidObjectsNext.begin();
 
-    while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
+    for(; centroid != centroidsObjects.end() && centroidNext != centroidObjectsNext.end(); ++centroid, ++centroidNext)
     {
-        curPoint.clear();
-        if(parsePoint(line, curPoint))
+        if(!std::equal(centroid->second.begin(), centroid->second.end(), centroidNext->second.begin(), [](double cDoubleVal, double cNextDoubleVal)
         {
-            double minDist = pow(10,10);
-            double curDist = 0;
-            int foundCentroid = centroids.begin()->first;
-
-            for(auto centroid = centroids.begin(); centroid != centroids.end(); ++centroid)
-            {
-                if(compute(curPoint, centroid->second, curDist))
-                {
-                    if (curDist < minDist)
-                    {
-                        minDist = curDist;
-                        foundCentroid = centroid->first;
-                    }
-                }
-                else
-                {
-                    std::cerr << "failed to compute centroids, line: " << line << "\n";
-                    return false;
-                }
-            }
-
-            auto centrDim = centroids[foundCentroid].begin();
-            auto pointDim = curPoint.begin();
-
-            for(;centrDim != centroids[foundCentroid].end() &&
-                pointDim != curPoint.end();
-                ++centrDim, ++pointDim)
-            {
-                *centrDim = ((*centrDim+*pointDim) / 2.0);
-            }
-        }
-        else
+          const FloatingPoint<double> lhs(cDoubleVal), rhs(cNextDoubleVal);
+          return lhs.AlmostEquals(rhs);
+         }))
         {
-             std::cerr << "failed to parse point, line: " << line << "\n";
-             return false;
+            return false;
         }
     }
     return true;
