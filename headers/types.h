@@ -18,7 +18,7 @@ struct ProgramOptions final
 
 };
 
-typedef std::unordered_map<int, std::vector<double>> CentroidsType ;
+typedef std::vector<std::vector<double>> CentroidsType ;
 
 
 #endif

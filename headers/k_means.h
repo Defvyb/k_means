@@ -16,15 +16,15 @@ class KMeans final
 private:
     ProgramOptions & m_options;
     bool inspectFile() noexcept;
-    bool initCentroids(CentroidsType & centroids) noexcept;
+    bool obtainStartCentroids(CentroidsType & centroids) noexcept;
     bool doClustering(CentroidsType & centroids) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
-                       std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum) noexcept;
+                       std::vector<std::pair<std::vector<double>, double>> & centroidsSum) noexcept;
     bool centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept;
-    void initCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+    void initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                           const CentroidsType & centroids) noexcept;
-    void moveCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+    void moveCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                           CentroidsType & centroids) noexcept;
     int m_lineCount;
     const int MAX_LINE_LENGTH = 32000;

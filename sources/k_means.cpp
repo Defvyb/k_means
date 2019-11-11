@@ -2,28 +2,12 @@
 #include <parser.hpp>
 #include <math.h>
 #include <almost_equal_gtest.hpp>
-#include <chrono>
+#include <unordered_set>
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
-    auto t1 = std::chrono::high_resolution_clock::now();
     if(!inspectFile()) return false;
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "inspect duration: " << duration << std::endl;
-
-    t1 = std::chrono::high_resolution_clock::now();
-    if(!initCentroids(centroids)) return false;
-    t2 = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "initCentroids duration: " << duration << std::endl;
-
-
-    t1 = std::chrono::high_resolution_clock::now();
+    if(!obtainStartCentroids(centroids)) return false;
     if(!doClustering(centroids)) return false;
-    t2 = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "doClustering duration: " << duration << std::endl;
-
 
     return true;
 }
@@ -48,12 +32,16 @@ bool KMeans::inspectFile() noexcept
     return true;
 }
 
-//TODO: initCentroids without inspecting
-bool KMeans::initCentroids(CentroidsType & centroids) noexcept
+//TODO: obtainStartCentroids without inspecting
+bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
     int iterations = m_options.maxIterations;
+
+    std::unordered_map<int, std::vector<double>> selectedCentroids;
+    centroids.reserve(m_options.klusterCentroidsCount);
+    selectedCentroids.reserve(m_options.klusterCentroidsCount);
 
     for(uint16_t i=0; i < m_options.klusterCentroidsCount; i++)
     {
@@ -61,9 +49,9 @@ bool KMeans::initCentroids(CentroidsType & centroids) noexcept
         while(iterations)
         {
             int val = rand()%(m_lineCount+1);
-            if(centroids.find(val) == centroids.end())
+            if(selectedCentroids.find(val) == selectedCentroids.end())
             {
-                centroids[val] = std::vector<double>();
+                selectedCentroids[val] = std::vector<double>();
                 break;
             }
             iterations--;
@@ -77,16 +65,21 @@ bool KMeans::initCentroids(CentroidsType & centroids) noexcept
     char line[MAX_LINE_LENGTH];
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
-        i++;
-        auto curCentroid = centroids.find(i);
-        if(centroids.end() != curCentroid)
+        auto curCentroid = selectedCentroids.find(i);
+        if(selectedCentroids.end() != curCentroid)
         {
-            if(!parsePoint(line, curCentroid->second))
+            if(!parsePoint(line, selectedCentroids[i]))
             {
                 std::cerr << "ERROR: failed to parse dimensions, line " << i << " text: " << line << "\n";
                 return false;
             }
         }
+        i++;
+    }
+
+    for(auto & centroid: selectedCentroids)
+    {
+        centroids.push_back(centroid.second);
     }
     return true;
 }
@@ -118,29 +111,30 @@ static bool compute(std::vector<double> & pointDimensions, std::vector<double> &
     return true;
 }
 
-void KMeans::initCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+void KMeans::initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                               const CentroidsType & centroids) noexcept
 {
-    for(auto centroid: centroids)
+
+    for(int i=0; i < centroids.size(); ++i)
     {
-        centroidsSum[centroid.first].first = centroid.second;
-        centroidsSum[centroid.first].second = 1;
+        centroidsSum[i].first = centroids[i];
+        centroidsSum[i].second = 1;
     }
 }
 
-void KMeans::moveCentroids(std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum,
+void KMeans::moveCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                       CentroidsType & centroids) noexcept
 {
-    for(auto & centroid: centroids)
+    for(int i=0; i < centroids.size(); ++i)
     {
-        auto centroidSumDimension = centroidsSum[centroid.first].first.cbegin();
-        auto centroidDimension = centroid.second.begin();
+        auto centroidSumDimension = centroidsSum[i].first.cbegin();
+        auto centroidDimension = centroids[i].begin();
 
-        for(; centroidSumDimension != centroidsSum[centroid.first].first.cend() &&
-              centroidDimension != centroid.second.end();
+        for(; centroidSumDimension != centroidsSum[i].first.cend() &&
+              centroidDimension != centroids[i].end();
             ++centroidSumDimension, ++centroidDimension)
         {
-            *centroidDimension = *centroidSumDimension / centroidsSum[centroid.first].second;
+            *centroidDimension = *centroidSumDimension / centroidsSum[i].second;
         }
 
     }
@@ -149,39 +143,33 @@ void KMeans::moveCentroids(std::unordered_map<int, std::pair<std::vector<double>
 bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & curPointBuf,
                            CentroidsType & centroids,
-                           std::unordered_map<int, std::pair<std::vector<double>, double>> & centroidsSum) noexcept
+                           std::vector<std::pair<std::vector<double>, double>> & centroidsSum) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, m_options.fstream.beg);
     int lineNum = 0;
 
-    auto t1 = std::chrono::high_resolution_clock::now();
     initCentroids(centroidsSum, centroids);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "initCentroids duration: " << duration << std::endl;
-
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
         lineNum++;
         curPointBuf.clear();
-        t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
             double minDist = 10000000000.0;
             double curDist = 0;
-            int foundCentroid = centroids.begin()->first;
+            int foundCentroid = 0;
 
 
-            for(auto centroid = centroids.begin(); centroid != centroids.end(); ++centroid)
+            for(int i=0; i < centroids.size(); ++i)
             {
-                if(compute(curPointBuf, centroid->second, curDist))
+                if(compute(curPointBuf, centroids[i], curDist))
                 {
                     if (curDist < minDist)
                     {
                         minDist = curDist;
-                        foundCentroid = centroid->first;
+                        foundCentroid = i;
                     }
                 }
                 else
@@ -207,9 +195,6 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, line: " << lineNum << " text: " << lineBuf <<"\n";
             return false;
         }
-        t2 = std::chrono::high_resolution_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-        std::cout << "point process duration: " << duration << std::endl;
     }
     moveCentroids(centroidsSum, centroids);
     return true;
@@ -228,7 +213,8 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
 
     int iterations = m_options.maxIterations;
 
-    std::unordered_map<int, std::pair<std::vector<double>, double>> centroidsSum;
+    std::vector<std::pair<std::vector<double>, double>> centroidsSum;
+    centroidsSum.resize(centroids.size());
     while(true)
     {
         if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum)) return false;
@@ -257,7 +243,7 @@ bool KMeans::centroidsEqual(const CentroidsType & centroidsObjects,const Centroi
 
     for(; centroid != centroidsObjects.end() && centroidNext != centroidObjectsNext.end(); ++centroid, ++centroidNext)
     {
-        if(!std::equal(centroid->second.begin(), centroid->second.end(), centroidNext->second.begin(), [](double cDoubleVal, double cNextDoubleVal)
+        if(!std::equal(centroid->begin(), centroid->end(), centroidNext->begin(), [](double cDoubleVal, double cNextDoubleVal)
         {
           const FloatingPoint<double> lhs(cDoubleVal), rhs(cNextDoubleVal);
           return lhs.AlmostEquals(rhs);
