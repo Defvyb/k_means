@@ -2,12 +2,30 @@
 #include <parser.hpp>
 #include <math.h>
 #include <almost_equal_gtest.hpp>
-
+#include <chrono>
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
+    auto t1 = std::chrono::high_resolution_clock::now();
     if(!inspectFile()) return false;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    std::cout << "inspect duration: " << duration << std::endl;
+
+    t1 = std::chrono::high_resolution_clock::now();
     if(!initCentroids(centroids)) return false;
+    t2 = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    std::cout << "initCentroids duration: " << duration << std::endl;
+
+
+    t1 = std::chrono::high_resolution_clock::now();
     if(!doClustering(centroids)) return false;
+    t2 = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    std::cout << "doClustering duration: " << duration << std::endl;
+
+
+    return true;
 }
 
 //TODO: remove inspecting
@@ -137,16 +155,24 @@ bool KMeans::calcCentroids(char * lineBuf,
     m_options.fstream.seekg(0, m_options.fstream.beg);
     int lineNum = 0;
 
+    auto t1 = std::chrono::high_resolution_clock::now();
     initCentroids(centroidsSum, centroids);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    std::cout << "initCentroids duration: " << duration << std::endl;
+
+
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
         lineNum++;
         curPointBuf.clear();
+        t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
-            double minDist = pow(10,10);
+            double minDist = 10000000000.0;
             double curDist = 0;
             int foundCentroid = centroids.begin()->first;
+
 
             for(auto centroid = centroids.begin(); centroid != centroids.end(); ++centroid)
             {
@@ -181,6 +207,9 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, line: " << lineNum << " text: " << lineBuf <<"\n";
             return false;
         }
+        t2 = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+        std::cout << "point process duration: " << duration << std::endl;
     }
     moveCentroids(centroidsSum, centroids);
     return true;
