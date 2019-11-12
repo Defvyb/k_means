@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     means.clustering(centroids);
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "clasterisation duration: " << duration << std::endl;
+    std::cout << "clasterisation duration: " << duration << " microseconds" << std::endl;
 
 	return 0;
 }

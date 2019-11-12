@@ -2,12 +2,12 @@
 #define _K_MEANS_H_
 #include <types.h>
 #include <vector>
-#include <unordered_map>
+#include <thread_pool.hpp>
 
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options):m_options(options)
+    KMeans(ProgramOptions & options):m_options(options), pool(m_options.threadPoolSize)
     {
     }
 
@@ -20,14 +20,17 @@ private:
     bool doClustering(CentroidsType & centroids) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
-                       std::vector<std::pair<std::vector<double>, double>> & centroidsSum) noexcept;
+                       std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+                        std::vector<double> & dists) noexcept;
     bool centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept;
     void initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                           const CentroidsType & centroids) noexcept;
     void moveCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                           CentroidsType & centroids) noexcept;
-    int m_lineCount;
+
     const int MAX_LINE_LENGTH = 32000;
+    int m_lineCount;
+    ThreadPool pool;
 };
 
 #endif

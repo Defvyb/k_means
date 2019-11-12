@@ -2,7 +2,10 @@
 #include <parser.hpp>
 #include <math.h>
 #include <almost_equal_gtest.hpp>
-#include <unordered_set>
+#include <algorithm>
+#include <unordered_map>
+#include <chrono>
+
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
     if(!inspectFile()) return false;
@@ -84,32 +87,6 @@ bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
     return true;
 }
 
-static bool compute(std::vector<double> & pointDimensions, std::vector<double> & centerDimentions, double & result ) noexcept
-{
-    auto pointDim = pointDimensions.begin();
-    auto centerDim = centerDimentions.begin();
-
-    double sumOfPow = 0;
-    errno = 0;
-    for(;pointDim != pointDimensions.end() && centerDim != centerDimentions.end();
-        ++pointDim, ++centerDim)
-    {
-        sumOfPow += pow((*pointDim - *centerDim),2.0);
-    }
-    result = sqrt(sumOfPow);
-
-    if(errno == EDOM) //compute error
-    {
-        return false;
-    }
-
-    if(pointDim != pointDimensions.end() || centerDim != centerDimentions.end())//file format error
-    {
-        return false;
-    }
-
-    return true;
-}
 
 void KMeans::initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
                               const CentroidsType & centroids) noexcept
@@ -143,58 +120,43 @@ void KMeans::moveCentroids(std::vector<std::pair<std::vector<double>, double>> &
 bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & curPointBuf,
                            CentroidsType & centroids,
-                           std::vector<std::pair<std::vector<double>, double>> & centroidsSum) noexcept
+                           std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+                           std::vector<double> & dists) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, m_options.fstream.beg);
-    int lineNum = 0;
 
     initCentroids(centroidsSum, centroids);
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
-        lineNum++;
-        curPointBuf.clear();
+       // auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
-            double minDist = 10000000000.0;
-            double curDist = 0;
-            int foundCentroid = 0;
+            pool.setParams(&curPointBuf, &centroids, &dists);
+            pool.start();
+            while(!pool.ready());
+
+            int foundCentroid = std::distance(dists.begin(), std::min_element(dists.begin(), dists.end()));
+
+           std::transform(centroidsSum[foundCentroid].first.begin(),
+                           centroidsSum[foundCentroid].first.end(),
+                           curPointBuf.begin(),
+                           centroidsSum[foundCentroid].first.begin(),
+                           std::plus<double>());
 
 
-            for(int i=0; i < centroids.size(); ++i)
-            {
-                if(compute(curPointBuf, centroids[i], curDist))
-                {
-                    if (curDist < minDist)
-                    {
-                        minDist = curDist;
-                        foundCentroid = i;
-                    }
-                }
-                else
-                {
-                    std::cerr << "failed to compute centroids line: " << lineNum << " text: " << lineBuf <<"\n";
-                    return false;
-                }
-            }
-
-            auto centrDim = centroidsSum[foundCentroid].first.begin();
-            auto pointDim = curPointBuf.begin();
-
-            for(;centrDim != centroidsSum[foundCentroid].first.end() &&
-                pointDim != curPointBuf.end();
-                ++centrDim, ++pointDim)
-            {
-                *centrDim += *pointDim;
-            }
             centroidsSum[foundCentroid].second++;
         }
         else
         {
-            std::cerr << "failed to parse point, line: " << lineNum << " text: " << lineBuf <<"\n";
+            std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
+      /*  auto t2 = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+        std::cout << duration << std::endl;*/
+
     }
     moveCentroids(centroidsSum, centroids);
     return true;
@@ -213,13 +175,15 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
 
     int iterations = m_options.maxIterations;
 
+    std::vector<double> centroidsDistances;
+    centroidsDistances.resize(m_options.klusterCentroidsCount);
     std::vector<std::pair<std::vector<double>, double>> centroidsSum;
     centroidsSum.resize(centroids.size());
     while(true)
     {
-        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum)) return false;
+        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsDistances)) return false;
         centroidsNext = centroids;
-        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum)) return false;
+        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsDistances)) return false;
 
         iterations--;
         if(!iterations) break;

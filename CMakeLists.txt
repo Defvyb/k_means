@@ -9,6 +9,8 @@ include_directories(${PROJECT_SOURCE_DIR}/headers)
 
 add_executable(${PROJECT_NAME} ${headers} ${sources} ${headers_hpp})
 
+target_link_libraries(${PROJECT_NAME} pthread)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
             CXX_STANDARD 11
             CXX_EXTENSIONS ON

@@ -2,7 +2,6 @@
 #define _TYPES_H_
 
 #include <fstream>
-#include <unordered_map>
 #include <vector>
 static const int MAX_ELEMENT_COUNT = 1000;
 
