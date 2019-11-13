@@ -6,15 +6,15 @@
 #include <thread>
 #include <atomic>
 #include <math.h>
-
 #include <iostream>
-static double tpCompute(std::vector<double> & pointDimensions, std::vector<double> & centerDimentions ) noexcept
+#include <types.h>
+static double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
-    auto pointDim = pointDimensions.begin();
+    auto pointDim = pointDimensions->begin();
     auto centerDim = centerDimentions.begin();
 
     double sumOfPow = 0;
-    for(;pointDim != pointDimensions.end() && centerDim != centerDimentions.end();
+    for(;pointDim != pointDimensions->end() && centerDim != centerDimentions.end();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
@@ -25,13 +25,18 @@ static double tpCompute(std::vector<double> & pointDimensions, std::vector<doubl
 
 class ThreadPool {
 public:
-    ThreadPool(size_t threads)
-        :stop(false)
+    ThreadPool(size_t threads,
+               CentroidsType  & centerDimentions,
+               std::vector<double> & centroidsDistances)
+        :m_stop(false),
+          m_pointDimensions(nullptr),
+          m_centerDimentions(centerDimentions),
+          m_centroidsDistances(centroidsDistances),
+          m_threads(threads)
     {
-        act.resize(threads);
-        for(auto & val: act)
+        for(int i=0; i< m_threads; i++)
         {
-            val = false;
+            act[i].store(false, std::memory_order_relaxed);
         }
 
         for(size_t i = 0; i<threads ;++i)
@@ -40,39 +45,37 @@ public:
                 {
                     for(;;)
                     {
-                        if(act[i])
+                        if( act[i].load(std::memory_order_relaxed))
                         {
-                            int size = m_centerDimentions->size();
-                            int numOperations = size/threads;
-                            if(i+1 == act.size())
+                            int size = m_centerDimentions.size();
+                            int numOperations = size/m_threads;
+                            int maxOperations;
+                            if(i+1 == m_threads)
                             {
-                                for(int j = i*numOperations; j < size; ++j )
-                                {
-                                    (*m_results)[j] = tpCompute(*m_pointDimensions, (*m_centerDimentions)[j]);
-                                }
+                                maxOperations = size;
                             }
                             else
                             {
-                                for(int j = i*numOperations; j < ((i+1)*numOperations); ++j )
-                                {
-                                    (*m_results)[j] = tpCompute(*m_pointDimensions, (*m_centerDimentions)[j]);
-                                }
+                                maxOperations = ((i+1)*numOperations);
+                            }
+                            for(int j = i*numOperations; j < maxOperations; ++j )
+                            {
+                                (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centerDimentions)[j]);
                             }
 
-                              //
 
-                            act[i] = false;
+                            act[i].store(false, std::memory_order_relaxed);
                         }
-                        if(stop) return;
+                        if(m_stop.load(std::memory_order_relaxed)) return;
                     }
 
                 }
             );
     }
 
-    inline ~ThreadPool()
+    ~ThreadPool()
     {
-        stop = true;
+        m_stop.store(true, std::memory_order_relaxed);
 
         for(std::thread &worker: workers)
         {
@@ -81,40 +84,39 @@ public:
     }
 
 
-    void start()
+    bool start(std::vector<double> * pointDimensions)
     {
-        for(auto & val: act)
+        if(pointDimensions) m_pointDimensions = pointDimensions;
+        else return false;
+        for(int i=0; i< m_threads; i++)
         {
-            val = true;
+            act[i].store(true, std::memory_order_relaxed);
         }
+        return true;
     }
 
     bool ready()
     {
-        for(auto & val: act)
+
+        for(int i=0; i< m_threads; i++)
         {
-            if(val == true) return false;
+
+            if(act[i].load(std::memory_order_relaxed) == true) return false;
         }
         return true;
     }
 
 
-    void setParams(std::vector<double> * pointDimensions, std::vector<std::vector<double>> * centerDimentions, std::vector<double> * results)
-    {
-        m_pointDimensions = pointDimensions;
-        m_centerDimentions = centerDimentions;
-        m_results = results;
-    }
 
 private:
     std::vector<std::thread> workers;
 
+    std::atomic<bool> m_stop;
     std::vector<double> * m_pointDimensions;
-    std::vector<std::vector<double>> * m_centerDimentions;
-    std::vector<double> * m_results;
-
-    std::atomic<bool> stop;
-    std::deque<std::atomic<bool>> act;
+    std::vector<std::vector<double>> & m_centerDimentions;
+    std::vector<double> & m_centroidsDistances;
+    int m_threads;
+    std::array<std::atomic<bool>, 100> act;
 };
 
 

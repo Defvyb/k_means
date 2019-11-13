@@ -3,11 +3,11 @@
 #include <types.h>
 #include <vector>
 #include <thread_pool.hpp>
-
+#include <memory>
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options):m_options(options), pool(m_options.threadPoolSize)
+    KMeans(ProgramOptions & options):m_options(options)
     {
     }
 
@@ -30,7 +30,7 @@ private:
 
     const int MAX_LINE_LENGTH = 32000;
     int m_lineCount;
-    ThreadPool pool;
+    std::unique_ptr<ThreadPool> pool;
 };
 
 #endif
