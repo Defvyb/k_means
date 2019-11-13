@@ -40,7 +40,6 @@ Output File(output.file):
 Usage: 
 
     -f=<filename>(mandatory parameter)
-    -t=<thread pool size>(Default: 1)
     -t=<thread pool size>(Default: 1) 
        <thread pool size> <= <kluster centroids count> && <thread pool size> < 100 
     -k=<kluster centroids count>(Default: 10)
