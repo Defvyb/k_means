@@ -85,7 +85,7 @@ bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
 }
 
 
-void KMeans::initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+void KMeans::initCentroids(CentroidsSum & centroidsSum,
                               const CentroidsType & centroids) noexcept
 {
 
@@ -96,7 +96,7 @@ void KMeans::initCentroids(std::vector<std::pair<std::vector<double>, double>> &
     }
 }
 
-void KMeans::moveCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+void KMeans::moveCentroids(CentroidsSum & centroidsSum,
                       CentroidsType & centroids) noexcept
 {
     for(int i=0; i < centroids.size(); ++i)
@@ -117,7 +117,7 @@ void KMeans::moveCentroids(std::vector<std::pair<std::vector<double>, double>> &
 bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & curPointBuf,
                            CentroidsType & centroids,
-                           std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+                           CentroidsSum & centroidsSum,
                            std::vector<double> & centroidsDistances) noexcept
 {
     m_options.fstream.clear();
@@ -127,7 +127,7 @@ bool KMeans::calcCentroids(char * lineBuf,
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
-        auto t1 = std::chrono::high_resolution_clock::now();
+       // auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
             if(!pool->start(&curPointBuf)) return false;
@@ -150,9 +150,9 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
-        auto t2 = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
-        std::cout << duration << std::endl;
+        //auto t2 = std::chrono::high_resolution_clock::now();
+        //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
+        //std::cout << duration << std::endl;
 
     }
     moveCentroids(centroidsSum, centroids);
@@ -175,7 +175,7 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
 
     std::vector<double> centroidsDistances;
     centroidsDistances.resize(m_options.centroidsCount);
-    std::vector<std::pair<std::vector<double>, double>> centroidsSum;
+    CentroidsSum centroidsSum;
     centroidsSum.resize(centroids.size());
 
     pool.reset(new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances));

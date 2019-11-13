@@ -18,6 +18,7 @@ struct ProgramOptions final
 };
 
 typedef std::vector<std::vector<double>> CentroidsType ;
+typedef std::vector<std::pair<std::vector<double>, double>> CentroidsSum;
 
 
 #endif

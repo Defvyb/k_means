@@ -20,12 +20,12 @@ private:
     bool doClustering(CentroidsType & centroids) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
-                       std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+                        CentroidsSum & centroidsSum,
                         std::vector<double> & dists) noexcept;
     bool centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept;
-    void initCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+    void initCentroids(CentroidsSum & centroidsSum,
                           const CentroidsType & centroids) noexcept;
-    void moveCentroids(std::vector<std::pair<std::vector<double>, double>> & centroidsSum,
+    void moveCentroids(CentroidsSum & centroidsSum,
                           CentroidsType & centroids) noexcept;
 
     const int MAX_LINE_LENGTH = 32000;
