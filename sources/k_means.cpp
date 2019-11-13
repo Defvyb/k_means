@@ -15,7 +15,6 @@ bool KMeans::clustering(CentroidsType & centroids) noexcept
     return true;
 }
 
-//TODO: remove inspecting
 bool KMeans::inspectFile() noexcept
 {
     m_options.fstream.seekg(0, std::ios::beg);
@@ -35,7 +34,6 @@ bool KMeans::inspectFile() noexcept
     return true;
 }
 
-//TODO: obtainStartCentroids without inspecting
 bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
 {
     srand(static_cast<unsigned>(time(nullptr)));
@@ -51,7 +49,7 @@ bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
         iterations = m_options.maxIterations;
         while(iterations)
         {
-            int val = rand()%(m_lineCount+1);
+            int val = rand()%(m_lineCount);
             if(selectedCentroids.find(val) == selectedCentroids.end())
             {
                 selectedCentroids[val] = std::vector<double>();

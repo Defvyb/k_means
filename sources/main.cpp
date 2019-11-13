@@ -4,6 +4,7 @@
 #include <types.h>
 #include <k_means.h>
 #include <chrono>
+#include <algorithm>
 
 
 int main(int argc, char *argv[])
@@ -20,7 +21,18 @@ int main(int argc, char *argv[])
     means.clustering(centroids);
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << "clasterisation duration: " << duration << " microseconds" << std::endl;
+    std::cout << "clasterisation duration: " << duration << " microseconds\n";
+
+    std::sort(centroids.begin(), centroids.end());
+
+    for(auto centroid: centroids)
+    {
+        for(auto val: centroid)
+        {
+            std::cout << val << " ";
+        }
+        std::cout << "\n";
+    }
 
 	return 0;
 }
