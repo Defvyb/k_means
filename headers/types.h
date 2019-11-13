@@ -1,8 +1,8 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
-#include <fstream>
 #include <vector>
+#include <fstream>
 static const int MAX_ELEMENT_COUNT = 1000;
 
 struct ProgramOptions final

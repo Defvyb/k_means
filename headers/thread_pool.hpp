@@ -1,12 +1,10 @@
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
 
-#include <deque>
 #include <vector>
 #include <thread>
 #include <atomic>
 #include <math.h>
-#include <iostream>
 #include <types.h>
 
 static double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept

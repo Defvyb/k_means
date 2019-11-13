@@ -1,6 +1,5 @@
 #include <k_means.h>
 #include <parser.hpp>
-#include <math.h>
 #include <algorithm>
 #include <unordered_map>
 #include <chrono>

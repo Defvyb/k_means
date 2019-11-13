@@ -3,7 +3,6 @@
 #include <types.h>
 #include <vector>
 #include <thread_pool.hpp>
-#include <memory>
 class KMeans final
 {
   public:
