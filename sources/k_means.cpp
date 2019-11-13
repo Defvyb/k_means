@@ -75,7 +75,7 @@ bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
         while(iterations)
         {
             int val = rand()%(m_lineCount);
-            if(selectedCentroids.find(val) == selectedCentroids.end())
+            if(selectedCentroids.find(val) == selectedCentroids.cend())
             {
                 selectedCentroids[val] = std::vector<double>();
                 break;
@@ -92,7 +92,7 @@ bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
         auto curCentroid = selectedCentroids.find(i);
-        if(selectedCentroids.end() != curCentroid)
+        if(selectedCentroids.cend() != curCentroid)
         {
             if(!parsePoint(line, selectedCentroids[i]))
             {
@@ -156,15 +156,15 @@ bool KMeans::calcCentroids(char * lineBuf,
         //auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
-            if(!pool->start(&curPointBuf)) return false;
+            if(!pool->start(curPointBuf)) return false;
             while(!pool->ready());
 
-            int foundCentroid = std::distance(centroidsDistances.begin(),
-                                std::min_element(centroidsDistances.begin(), centroidsDistances.end()));
+            int foundCentroid = std::distance(centroidsDistances.cbegin(),
+                                std::min_element(centroidsDistances.cbegin(), centroidsDistances.cend()));
 
-            std::transform(centroidsSum[foundCentroid].first.begin(),
-                           centroidsSum[foundCentroid].first.end(),
-                           curPointBuf.begin(),
+            std::transform(centroidsSum[foundCentroid].first.cbegin(),
+                           centroidsSum[foundCentroid].first.cend(),
+                           curPointBuf.cbegin(),
                            centroidsSum[foundCentroid].first.begin(),
                            std::plus<double>());
 
@@ -228,12 +228,12 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
 
 bool KMeans::centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept
 {
-    auto centroid = centroidsObjects.begin();
-    auto centroidNext = centroidObjectsNext.begin();
+    auto centroid = centroidsObjects.cbegin();
+    auto centroidNext = centroidObjectsNext.cbegin();
 
-    for(; centroid != centroidsObjects.end() && centroidNext != centroidObjectsNext.end(); ++centroid, ++centroidNext)
+    for(; centroid != centroidsObjects.cend() && centroidNext != centroidObjectsNext.cend(); ++centroid, ++centroidNext)
     {
-        if(!std::equal(centroid->begin(), centroid->end(), centroidNext->begin()))
+        if(!std::equal(centroid->cbegin(), centroid->cend(), centroidNext->cbegin()))
         {
             return false;
         }

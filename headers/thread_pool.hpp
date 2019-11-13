@@ -8,13 +8,14 @@
 #include <math.h>
 #include <iostream>
 #include <types.h>
+
 static double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
-    auto pointDim = pointDimensions->begin();
-    auto centerDim = centerDimentions.begin();
+    auto pointDim = pointDimensions->cbegin();
+    auto centerDim = centerDimentions.cbegin();
 
     double sumOfPow = 0;
-    for(;pointDim != pointDimensions->end() && centerDim != centerDimentions.end();
+    for(;pointDim != pointDimensions->cend() && centerDim != centerDimentions.cend();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
@@ -23,7 +24,8 @@ static double tpCompute(const std::vector<double> * pointDimensions, const std::
 
 }
 
-class ThreadPool {
+class ThreadPool final
+{
 public:
     ThreadPool(size_t threads,
                CentroidsType  & centerDimentions,
@@ -84,10 +86,9 @@ public:
     }
 
 
-    bool start(std::vector<double> * pointDimensions)
+    bool start(std::vector<double> & pointDimensions)
     {
-        if(pointDimensions) m_pointDimensions = pointDimensions;
-        else return false;
+        m_pointDimensions = &pointDimensions;
         for(int i=0; i< m_threads; i++)
         {
             act[i].store(true);
@@ -95,7 +96,7 @@ public:
         return true;
     }
 
-    bool ready()
+    bool ready() const
     {
 
         for(int i=0; i< m_threads; i++)
