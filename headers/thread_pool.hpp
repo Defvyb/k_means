@@ -36,7 +36,7 @@ public:
     {
         for(int i=0; i< m_threads; i++)
         {
-            act[i].store(false, std::memory_order_relaxed);
+            act[i].store(false);
         }
 
         for(size_t i = 0; i<threads ;++i)
@@ -45,7 +45,7 @@ public:
                 {
                     for(;;)
                     {
-                        if( act[i].load(std::memory_order_relaxed))
+                        if( act[i].load())
                         {
                             int size = m_centerDimentions.size();
                             int numOperations = size/m_threads;
@@ -64,9 +64,9 @@ public:
                             }
 
 
-                            act[i].store(false, std::memory_order_relaxed);
+                            act[i].store(false);
                         }
-                        if(m_stop.load(std::memory_order_relaxed)) return;
+                        if(m_stop.load()) return;
                     }
 
                 }
@@ -75,7 +75,7 @@ public:
 
     ~ThreadPool()
     {
-        m_stop.store(true, std::memory_order_relaxed);
+        m_stop.store(true);
 
         for(std::thread &worker: workers)
         {
@@ -90,7 +90,7 @@ public:
         else return false;
         for(int i=0; i< m_threads; i++)
         {
-            act[i].store(true, std::memory_order_relaxed);
+            act[i].store(true);
         }
         return true;
     }
@@ -100,8 +100,7 @@ public:
 
         for(int i=0; i< m_threads; i++)
         {
-
-            if(act[i].load(std::memory_order_relaxed) == true) return false;
+            if(act[i].load() == true) return false;
         }
         return true;
     }

@@ -178,7 +178,7 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     CentroidsSum centroidsSum;
     centroidsSum.resize(centroids.size());
 
-    pool.reset(new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances));
+    pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances);
     while(true)
     {
         if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsDistances)) return false;

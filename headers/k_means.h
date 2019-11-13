@@ -7,8 +7,12 @@
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options):m_options(options)
+    KMeans(ProgramOptions & options):m_options(options), pool(nullptr)
     {
+    }
+    ~KMeans()
+    {
+        if(pool) delete pool;
     }
 
     bool clustering(CentroidsType & centroids) noexcept;
@@ -30,7 +34,7 @@ private:
 
     const int MAX_LINE_LENGTH = 32000;
     int m_lineCount;
-    std::unique_ptr<ThreadPool> pool;
+    ThreadPool * pool;
 };
 
 #endif
