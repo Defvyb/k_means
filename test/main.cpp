@@ -8,23 +8,6 @@ int main(int argc, char * argv [])
     return RUN_ALL_TESTS();
 }
 
-TEST(ParserTest, t)
-{
-    srand(static_cast<unsigned>(time(nullptr)));
-
-    std::ofstream file("fileBig");
-    for (int i=0; i < 1000; i++)
-    {
-        for(int i=0; i< 5; i++)
-        {
-            file << rand()%(1000) << " ";
-        }
-         file << rand()%(1000) << "\n";
-    }
-}
-
-
-
 TEST(ParserTest, direct_case1)
 {
     std::vector<double> outVect;
