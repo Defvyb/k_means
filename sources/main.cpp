@@ -5,7 +5,7 @@
 #include <k_means.h>
 #include <chrono>
 #include <algorithm>
-
+#include <fstream>
 
 int main(int argc, char *argv[])
 {
@@ -18,21 +18,31 @@ int main(int argc, char *argv[])
     KMeans means(options);
     CentroidsType centroids;
     auto t1 = std::chrono::high_resolution_clock::now();
-    means.clustering(centroids);
+    if(!means.clustering(centroids)) return -1;
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 
 
     std::sort(centroids.begin(), centroids.end());
 
-    for(auto centroid: centroids)
+    std::ofstream outFile(options.outputFileName);
+    if(outFile.is_open())
     {
-        for(auto val: centroid)
+        for(auto centroid: centroids)
         {
-            std::cout << val << " ";
+            for(auto val: centroid)
+            {
+                outFile << val << " ";
+            }
+            outFile << "\n";
         }
-        std::cout << "\n";
     }
+    else
+    {
+        std::cerr << "failed to open " << options.outputFileName << "\n";
+        return -1;
+    }
+
 
     std::cout << "clasterisation duration: " << duration << " microseconds\n";
 	return 0;

@@ -11,6 +11,7 @@ void printHelp()
     std::cout << "       -t=<thread pool size>(Default: 1) \n";
     std::cout << "       -k=<kluster centroids count>(Default: 10) \n";
     std::cout << "       -m=<max iterations>(Default: 1000000) \n";
+    std::cout << "       -o=<filename>(Default: output.file) \n";
     std::cout << "       -h this help  \n";
 }
 
@@ -78,6 +79,12 @@ bool getProgramOptions(int argc, char *argv[],  ProgramOptions & options) noexce
                 std::cerr << "ERROR: failed setting max iterations count, it's value will be 1000000\n";
             }
             options.maxIterations = maxIterations;
+        }
+
+        findResult = arg.find("-o=");
+        if(findResult != std::string::npos)
+        {
+            options.outputFileName = arg.substr(arg.find_first_of("=")+1);
         }
     }
     if(filename.empty())

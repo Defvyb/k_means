@@ -21,9 +21,35 @@ bool KMeans::inspectFile() noexcept
 
     char line[MAX_LINE_LENGTH];
 
+    int elementsCount = 0;
+    std::vector<double> pointDimensions;
+    pointDimensions.reserve(1000);
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
+
         m_lineCount++;
+
+        if(parsePoint(line, pointDimensions))
+        {
+            if(!elementsCount)
+            {
+                elementsCount = pointDimensions.size();
+            }
+            else
+            {
+                if(elementsCount != pointDimensions.size())
+                {
+                    std::cerr << "ERROR: file format error, line: " <<m_lineCount << " text: " << line<< "\n" ;
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            std::cerr << "ERROR: file format error, line: " <<m_lineCount << " text: " << line<< "\n" ;
+            return false;
+        }
+
         if(m_lineCount > 1000000000)
         {
             std::cerr << "ERROR: there are more than 1 billion points in file \n" ;
@@ -127,7 +153,7 @@ bool KMeans::calcCentroids(char * lineBuf,
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
-       // auto t1 = std::chrono::high_resolution_clock::now();
+        //auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
             if(!pool->start(&curPointBuf)) return false;
@@ -150,9 +176,9 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
-        //auto t2 = std::chrono::high_resolution_clock::now();
+       // auto t2 = std::chrono::high_resolution_clock::now();
         //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
-        //std::cout << duration << std::endl;
+       // std::cout << duration << std::endl;
 
     }
     moveCentroids(centroidsSum, centroids);
