@@ -18,4 +18,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 
-add_subdirectory(test)
+#add_subdirectory(test)

@@ -86,14 +86,13 @@ public:
     }
 
 
-    bool start(std::vector<double> & pointDimensions)
+    void start(std::vector<double> & pointDimensions)
     {
         m_pointDimensions = &pointDimensions;
         for(int i=0; i< m_threads; i++)
         {
             act[i].store(true);
         }
-        return true;
     }
 
     bool ready() const

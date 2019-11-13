@@ -156,7 +156,7 @@ bool KMeans::calcCentroids(char * lineBuf,
         //auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
-            if(!pool->start(curPointBuf)) return false;
+            pool->start(curPointBuf);
             while(!pool->ready());
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
