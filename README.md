@@ -41,7 +41,7 @@ Usage:
 
     -f=<filename>(mandatory parameter)
     -t=<thread pool size>(Default: 1) 
-       <thread pool size> <= <kluster centroids count> && <thread pool size> < 100 
+       <thread pool size> <= <kluster centroids count> && <thread pool size> < 31 
     -k=<kluster centroids count>(Default: 10)
     -m=<max iterations>(Default: 1000000)
     -o=<filename>(Default: output.file)

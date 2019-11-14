@@ -9,7 +9,7 @@ void printHelp()
 {
     std::cout << "Usage: -f=<filename>(mandatory parameter) \n";
     std::cout << "       -t=<thread pool size>(Default: 1) \n";
-    std::cout << "       -k=<kluster centroids count>(Default: 10) \n";
+    std::cout << "       -k=<centroids count>(Default: 10) \n";
     std::cout << "       -m=<max iterations>(Default: 1000000) \n";
     std::cout << "       -o=<filename>(Default: output.file) \n";
     std::cout << "       -h this help  \n";
@@ -45,7 +45,7 @@ bool getProgramOptions(int argc, char *argv[],  ProgramOptions & options) noexce
         if(findResult != std::string::npos)
         {
             options.threadPoolSize = std::atoi(arg.substr(arg.find_first_of("=")+1).c_str());
-            if(!options.threadPoolSize || options.threadPoolSize < 1 || options.threadPoolSize > 100)
+            if(!options.threadPoolSize || options.threadPoolSize < 1 || options.threadPoolSize > 31)
             {
                 std::cerr << "ERROR: failed setting thread pool size, it's value will be 1\n";
                 options.threadPoolSize = 1;
@@ -59,12 +59,12 @@ bool getProgramOptions(int argc, char *argv[],  ProgramOptions & options) noexce
             if(centroidsCount > 1000)
             {
                 centroidsCount = 1000;
-                std::cerr << "ERROR: failed setting kluster centroids count, it's value will be 1000\n";
+                std::cerr << "ERROR: failed setting centroids count, it's value will be 1000\n";
             }
             options.centroidsCount = centroidsCount;
             if(!options.centroidsCount || options.centroidsCount < 1)
             {
-                std::cerr << "ERROR: failed setting kluster centroids count, it's value will be 3\n";
+                std::cerr << "ERROR: failed setting centroids count, it's value will be 3\n";
                 options.centroidsCount = 3;
             }
         }
@@ -95,7 +95,7 @@ bool getProgramOptions(int argc, char *argv[],  ProgramOptions & options) noexce
     }
     if(options.threadPoolSize > options.centroidsCount)
     {
-        std::cerr << "ERROR: thread pool size is bigger than klusters count \n";
+        std::cerr << "ERROR: thread pool size is bigger than centroids count \n";
         return false;
     }
 

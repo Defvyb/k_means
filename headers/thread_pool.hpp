@@ -34,10 +34,11 @@ public:
           m_centroidsDistances(centroidsDistances),
           m_threads(threads)
     {
-        for(int i=0; i< m_threads; i++)
+        for(int i=0; i<m_threads; ++i)
         {
-            act[i].store(false);
+            readyMask |= 1<<i;
         }
+        act = 0;
 
         for(size_t i = 0; i<threads ;++i)
             workers.emplace_back(
@@ -45,7 +46,7 @@ public:
                 {
                     for(;;)
                     {
-                        if( act[i].load())
+                        if( act & (1 << i))
                         {
                             int size = m_centerDimentions.size();
                             int numOperations = size/m_threads;
@@ -64,7 +65,7 @@ public:
                             }
 
 
-                            act[i].store(false);
+                            act ^= (1 << i);
                         }
                         if(m_stop.load()) return;
                     }
@@ -87,33 +88,26 @@ public:
     void start(std::vector<double> & pointDimensions)
     {
         m_pointDimensions = &pointDimensions;
-        for(int i=0; i< m_threads; i++)
-        {
-            act[i].store(true);
-        }
+        act = readyMask;
     }
 
-    bool ready() const
+    bool ready()
     {
-
-        for(int i=0; i< m_threads; i++)
-        {
-            if(act[i].load() == true) return false;
-        }
-        return true;
+       return act == 0;
     }
 
 
 
 private:
     std::vector<std::thread> workers;
-
     std::atomic<bool> m_stop;
     std::vector<double> * m_pointDimensions;
     std::vector<std::vector<double>> & m_centerDimentions;
     std::vector<double> & m_centroidsDistances;
+
     int m_threads;
-    std::array<std::atomic<bool>, 100> act;
+    uint32_t readyMask;
+    std::atomic<uint32_t> act;
 };
 
 

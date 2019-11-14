@@ -55,6 +55,12 @@ bool KMeans::inspectFile() noexcept
             return false;
         }
     }
+
+    if(m_lineCount < m_options.centroidsCount)
+    {
+        std::cerr << "ERROR: there are too much centroids, for file with " << m_lineCount <<" lines\n";
+        return false;
+    }
     return true;
 }
 
@@ -156,7 +162,9 @@ bool KMeans::calcCentroids(char * lineBuf,
         if(parsePoint(lineBuf, curPointBuf))
         {
             pool->start(curPointBuf);
-            while(!pool->ready());
+            while(!pool->ready())
+            {
+            }
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
                                 std::min_element(centroidsDistances.cbegin(), centroidsDistances.cend()));
@@ -175,9 +183,9 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
-       // auto t2 = std::chrono::high_resolution_clock::now();
+        //auto t2 = std::chrono::high_resolution_clock::now();
         //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
-       // std::cout << duration << std::endl;
+        //std::cout << duration << std::endl;
 
     }
     moveCentroids(centroidsSum, centroids);
