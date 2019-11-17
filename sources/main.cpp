@@ -17,10 +17,11 @@ int main(int argc, char *argv[])
 
     KMeans means(options);
     CentroidsType centroids;
-    auto t1 = std::chrono::high_resolution_clock::now();
-    if(!means.clustering(centroids)) return -1;
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    if(!means.clustering(centroids))
+    {
+        std::cerr << "clustering failed\n";
+        return -1;
+    }
 
     std::sort(centroids.begin(), centroids.end());
     std::ofstream outFile(options.outputFileName);
@@ -42,6 +43,6 @@ int main(int argc, char *argv[])
     }
 
 
-    std::cout << "clasterisation duration: " << duration << " microseconds\n";
+    std::cout << "clustering duration per iteration: " << means.getStat().getDurationPerIteration() << " microseconds\n";
 	return 0;
 }

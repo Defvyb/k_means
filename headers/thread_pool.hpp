@@ -32,13 +32,14 @@ public:
           m_pointDimensions(nullptr),
           m_centerDimentions(centerDimentions),
           m_centroidsDistances(centroidsDistances),
-          m_threads(threads)
+          m_threads(threads),
+          readyMask(0),
+          act(0)
     {
         for(int i=0; i<m_threads; ++i)
         {
             readyMask |= 1<<i;
         }
-        act = 0;
 
         for(size_t i = 0; i<threads ;++i)
             workers.emplace_back(

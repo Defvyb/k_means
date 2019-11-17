@@ -6,9 +6,15 @@
 
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     if(!inspectFile()) return false;
     if(!obtainStartCentroids(centroids)) return false;
     if(!doClustering(centroids)) return false;
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    m_stat.m_duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+
 
     return true;
 }
@@ -62,6 +68,12 @@ bool KMeans::inspectFile() noexcept
         return false;
     }
     return true;
+}
+
+
+Stat KMeans::getStat() const noexcept
+{
+    return m_stat;
 }
 
 bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
@@ -158,11 +170,10 @@ bool KMeans::calcCentroids(char * lineBuf,
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
-        //auto t1 = std::chrono::high_resolution_clock::now();
         if(parsePoint(lineBuf, curPointBuf))
         {
-            pool->start(curPointBuf);
-            while(!pool->ready())
+            m_pool->start(curPointBuf);
+            while(!m_pool->ready())
             {
             }
 
@@ -183,9 +194,7 @@ bool KMeans::calcCentroids(char * lineBuf,
             std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
-        //auto t2 = std::chrono::high_resolution_clock::now();
-        //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
-        //std::cout << duration << std::endl;
+
 
     }
     moveCentroids(centroidsSum, centroids);
@@ -203,23 +212,27 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     CentroidsType centroidsNext;
     centroidsNext.reserve(centroids.size());
 
-    int iterations = m_options.maxIterations;
-
+    m_iterations = 0;
 
     std::vector<double> centroidsDistances;
     centroidsDistances.resize(m_options.centroidsCount);
     CentroidsSum centroidsSum;
     centroidsSum.resize(centroids.size());
 
-    pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances);
+    if(m_pool)
+    {
+        delete m_pool;
+        m_pool = nullptr;
+    }
+    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances);
     while(true)
     {
         if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsDistances)) return false;
         centroidsNext = centroids;
         if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsDistances)) return false;
 
-        iterations--;
-        if(!iterations) break;
+        m_iterations++;
+        if(m_iterations >= m_options.maxIterations) break;
         if(centroidsEqual(centroids, centroidsNext))
         {
             centroids = centroidsNext;
@@ -230,6 +243,7 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
             centroids = centroidsNext;
         }
     }
+    m_stat.m_iterations = m_iterations;
     return true;
 }
 

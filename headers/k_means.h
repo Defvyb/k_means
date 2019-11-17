@@ -3,18 +3,30 @@
 #include <types.h>
 #include <vector>
 #include <thread_pool.hpp>
+
+struct Stat
+{
+    int m_iterations;
+    int m_duration;
+    int getDurationPerIteration()
+    {
+        return m_duration/m_iterations;
+    }
+};
+
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options):m_options(options), pool(nullptr)
+    KMeans(ProgramOptions & options):m_options(options), m_pool(nullptr)
     {
     }
     ~KMeans()
     {
-        if(pool) delete pool;
+        if(m_pool) delete m_pool;
     }
 
     bool clustering(CentroidsType & centroids) noexcept;
+    Stat getStat() const noexcept;
 
 private:
     ProgramOptions & m_options;
@@ -33,7 +45,11 @@ private:
 
     const int MAX_LINE_LENGTH = 32000;
     int m_lineCount;
-    ThreadPool * pool;
+    int m_iterations;
+
+    Stat m_stat;
+
+    ThreadPool * m_pool;
 };
 
 #endif

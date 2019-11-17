@@ -16,5 +16,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
             CXX_EXTENSIONS ON
             )
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
+set(CMAKE_CXX_FLAGS "-Og")
 
 #add_subdirectory(test)
