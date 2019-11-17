@@ -26,11 +26,11 @@ class ThreadPool final
 {
 public:
     ThreadPool(size_t threads,
-               CentroidsType  & centerDimentions,
+               CentroidsType  & centroids,
                std::vector<double> & centroidsDistances)
         :m_stop(false),
           m_pointDimensions(nullptr),
-          m_centerDimentions(centerDimentions),
+          m_centroids(centroids),
           m_centroidsDistances(centroidsDistances),
           m_threads(threads),
           readyMask(0),
@@ -49,7 +49,7 @@ public:
                     {
                         if( act & (1 << i))
                         {
-                            int size = m_centerDimentions.size();
+                            int size = m_centroids.size();
                             int numOperations = size/m_threads;
                             int maxOperations;
                             if(i+1 == m_threads)
@@ -62,7 +62,7 @@ public:
                             }
                             for(int j = i*numOperations; j < maxOperations; ++j )
                             {
-                                (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centerDimentions)[j]);
+                                (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centroids)[j]);
                             }
 
 
@@ -103,7 +103,7 @@ private:
     std::vector<std::thread> workers;
     std::atomic<bool> m_stop;
     std::vector<double> * m_pointDimensions;
-    std::vector<std::vector<double>> & m_centerDimentions;
+    std::vector<std::vector<double>> & m_centroids;
     std::vector<double> & m_centroidsDistances;
 
     int m_threads;
