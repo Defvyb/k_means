@@ -4,12 +4,64 @@
 #include <unordered_map>
 #include <chrono>
 
+
+bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, ProgramOptions & options, int lineCount) noexcept
+{
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    int iterations = options.maxIterations;
+
+    std::unordered_map<int, std::vector<double>> selectedCentroids;
+    centroids.reserve(options.centroidsCount);
+    selectedCentroids.reserve(options.centroidsCount);
+
+    for(uint16_t i=0; i < options.centroidsCount; i++)
+    {
+        iterations = options.maxIterations;
+        while(iterations)
+        {
+            int val = rand()%(lineCount);
+            if(selectedCentroids.find(val) == selectedCentroids.cend())
+            {
+                selectedCentroids[val] = std::vector<double>();
+                break;
+            }
+            iterations--;
+        }
+
+    }
+
+    options.fstream.clear();
+    options.fstream.seekg(0, options.fstream.beg);
+    int i=0;
+    char line[MAX_LINE_LENGTH];
+    while (options.fstream.getline(line, MAX_LINE_LENGTH))
+    {
+        auto curCentroid = selectedCentroids.find(i);
+        if(selectedCentroids.cend() != curCentroid)
+        {
+            if(!parsePoint(line, selectedCentroids[i]))
+            {
+                std::cerr << "ERROR: failed to parse dimensions, line " << i << " text: " << line << "\n";
+                return false;
+            }
+        }
+        i++;
+    }
+
+    for(auto & centroid: selectedCentroids)
+    {
+        centroids.push_back(centroid.second);
+    }
+    return true;
+}
+
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
     auto t1 = std::chrono::high_resolution_clock::now();
 
     if(!inspectFile()) return false;
-    if(!obtainStartCentroids(centroids)) return false;
+    if(!m_startCentroidsObtainer(centroids, m_options, m_lineCount)) return false;
     if(!doClustering(centroids)) return false;
 
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -76,60 +128,9 @@ Stat KMeans::getStat() const noexcept
     return m_stat;
 }
 
-bool KMeans::obtainStartCentroids(CentroidsType & centroids) noexcept
-{
-    srand(static_cast<unsigned>(time(nullptr)));
-
-    int iterations = m_options.maxIterations;
-
-    std::unordered_map<int, std::vector<double>> selectedCentroids;
-    centroids.reserve(m_options.centroidsCount);
-    selectedCentroids.reserve(m_options.centroidsCount);
-
-    for(uint16_t i=0; i < m_options.centroidsCount; i++)
-    {
-        iterations = m_options.maxIterations;
-        while(iterations)
-        {
-            int val = rand()%(m_lineCount);
-            if(selectedCentroids.find(val) == selectedCentroids.cend())
-            {
-                selectedCentroids[val] = std::vector<double>();
-                break;
-            }
-            iterations--;
-        }
-
-    }
-
-    m_options.fstream.clear();
-    m_options.fstream.seekg(0, m_options.fstream.beg);
-    int i=0;
-    char line[MAX_LINE_LENGTH];
-    while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
-    {
-        auto curCentroid = selectedCentroids.find(i);
-        if(selectedCentroids.cend() != curCentroid)
-        {
-            if(!parsePoint(line, selectedCentroids[i]))
-            {
-                std::cerr << "ERROR: failed to parse dimensions, line " << i << " text: " << line << "\n";
-                return false;
-            }
-        }
-        i++;
-    }
-
-    for(auto & centroid: selectedCentroids)
-    {
-        centroids.push_back(centroid.second);
-    }
-    return true;
-}
-
 
 void KMeans::initCentroids(CentroidsSum & centroidsSum,
-                              const CentroidsType & centroids) noexcept
+                           const CentroidsType & centroids) noexcept
 {
 
     for(int i=0; i < centroids.size(); ++i)

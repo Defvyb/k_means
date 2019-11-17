@@ -103,7 +103,7 @@ private:
     std::vector<std::thread> workers;
     std::atomic<bool> m_stop;
     std::vector<double> * m_pointDimensions;
-    std::vector<std::vector<double>> & m_centroids;
+    CentroidsType & m_centroids;
     std::vector<double> & m_centroidsDistances;
 
     int m_threads;

@@ -3,7 +3,6 @@
 #include <types.h>
 #include <vector>
 #include <thread_pool.hpp>
-
 struct Stat
 {
     int m_iterations;
@@ -14,10 +13,16 @@ struct Stat
     }
 };
 
+
+
+
+
+
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options):m_options(options), m_pool(nullptr)
+    KMeans(ProgramOptions & options, StartCentroidsObtainer startCentroidsObtainer = KMeans::defaultKMeansStartCentroidsObtainer):m_options(options), m_pool(nullptr),
+        m_startCentroidsObtainer(startCentroidsObtainer)
     {
     }
     ~KMeans()
@@ -31,7 +36,6 @@ class KMeans final
 private:
     ProgramOptions & m_options;
     bool inspectFile() noexcept;
-    bool obtainStartCentroids(CentroidsType & centroids) noexcept;
     bool doClustering(CentroidsType & centroids) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
@@ -43,7 +47,10 @@ private:
     void moveCentroids(CentroidsSum & centroidsSum,
                           CentroidsType & centroids) noexcept;
 
-    const int MAX_LINE_LENGTH = 32000;
+    static bool defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, ProgramOptions & options, int lineCount) noexcept;
+
+    StartCentroidsObtainer m_startCentroidsObtainer;
+
     int m_lineCount;
     int m_iterations;
 

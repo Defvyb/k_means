@@ -3,8 +3,9 @@
 
 #include <vector>
 #include <fstream>
+#include <functional>
 static const int MAX_ELEMENT_COUNT = 1000;
-
+const int MAX_LINE_LENGTH = 32000;
 struct ProgramOptions final
 {
     ProgramOptions(): threadPoolSize(1), centroidsCount(10), maxIterations(1000000), outputFileName("output.file")
@@ -20,6 +21,8 @@ struct ProgramOptions final
 
 typedef std::vector<std::vector<double>> CentroidsType ;
 typedef std::vector<std::pair<std::vector<double>, double>> CentroidsSum;
+
+typedef std::function<bool (CentroidsType & , ProgramOptions & , int ) > StartCentroidsObtainer;
 
 
 #endif
