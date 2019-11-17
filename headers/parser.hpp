@@ -4,7 +4,7 @@
 #include <string>
 #include <iostream>
 #include <types.h>
-bool parsePoint(const char * string, std::vector<double> & pointDimensions)
+static bool parsePoint(const char * string, std::vector<double> & pointDimensions)
 {
     pointDimensions.clear();
 
@@ -23,7 +23,7 @@ bool parsePoint(const char * string, std::vector<double> & pointDimensions)
 
            if(pointDimensions.size() > MAX_ELEMENT_COUNT)
            {
-               std::cerr << "ERROR: there are more than "<< MAX_ELEMENT_COUNT<< " elements in string" << string << "\n";
+               std::cerr << "ERROR: there are more than "<< MAX_ELEMENT_COUNT<< " elements in string: " << string << "\n";
                return false;
            }
 

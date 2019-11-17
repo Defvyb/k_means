@@ -1,11 +1,54 @@
 #include <parser.hpp>
 #include <gtest/gtest.h>
-#include <fstream>
+#include <k_means.h>
 int main(int argc, char * argv [])
 {
 
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+}
+
+
+
+TEST(KMeansTest, direct_cast_2Dim)
+{
+    int lineCount = 15;
+    {
+        std::ofstream testStream("test");
+        ASSERT_TRUE(testStream.is_open());
+
+        for(int i=0; i<(lineCount*2); i++,i++)
+        {
+            testStream <<i+1 << " " << i+2<<"\n";
+        }
+    }
+
+    ProgramOptions options;
+    options.centroidsCount = 2;
+    options.threadPoolSize = 1;
+
+    options.fstream =  std::ifstream("test");
+
+    CentroidsType testCentroids;
+    testCentroids.push_back({3,4});
+    testCentroids.push_back({10,11});
+
+
+    KMeans means(options, [&testCentroids](CentroidsType & centroids, ProgramOptions & , int)
+    {
+        centroids = testCentroids;
+        return true;
+    });
+
+    CentroidsType resultCentroids;
+    ASSERT_TRUE(means.clustering(resultCentroids));
+
+    ASSERT_EQ(7, resultCentroids.front().front());
+    ASSERT_EQ(8, resultCentroids.front().back());
+
+    ASSERT_EQ(22, resultCentroids.back().front());
+    ASSERT_EQ(23, resultCentroids.back().back());
+
 }
 
 TEST(ParserTest, direct_case1)
