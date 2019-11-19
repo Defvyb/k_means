@@ -86,7 +86,7 @@ bool KMeans::inspectFile() noexcept
 
         m_lineCount++;
 
-        if(parsePoint(line, pointDimensions))
+        if(parsePointWithChecking(line, pointDimensions))
         {
             if(!elementsCount)
             {

@@ -4,7 +4,52 @@
 #include <string>
 #include <iostream>
 #include <types.h>
-static bool parsePoint(const char * string, std::vector<double> & pointDimensions)
+
+static inline double getDouble(const char *& p)
+{
+    while(*p == ' ') p++;
+    static double r;
+    r=0.0;
+    bool neg = false;
+    if (*p == '-') {
+        neg = true;
+        ++p;
+    }
+    while (*p >= '0' && *p <= '9') {
+        r = (r*10.0) + (*p - '0');
+        ++p;
+    }
+    if (*p == '.') {
+        static double f;
+        f = 0.0;
+        int n = 0;
+        ++p;
+        while (*p >= '0' && *p <= '9') {
+            f = (f*10.0) + (*p - '0');
+            ++p;
+            ++n;
+        }
+        r += f / std::pow(10.0, n);
+    }
+    if (neg) {
+        r = -r;
+    }
+    p++;
+    return r;
+}
+static inline bool parsePoint(const char * string, std::vector<double> & pointDimensions)
+{
+    pointDimensions.clear();
+
+    const char* p = string;
+    for (double f = 0; *p != '\0'; )
+       {
+           pointDimensions.push_back(getDouble(p));
+       }
+    return true;
+}
+
+static inline bool parsePointWithChecking(const char * string, std::vector<double> & pointDimensions)
 {
     pointDimensions.clear();
 
