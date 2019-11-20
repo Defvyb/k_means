@@ -25,7 +25,7 @@ static double tpCompute(const std::vector<double> * pointDimensions, const std::
 class ThreadPool final
 {
 public:
-    ThreadPool(size_t threads,
+    explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
                std::vector<double> & centroidsDistances)
         :m_stop(false),
@@ -74,6 +74,10 @@ public:
                 }
             );
     }
+
+    ThreadPool(ThreadPool const&) = delete;
+    ThreadPool& operator=(ThreadPool const&) = delete;
+
 
     ~ThreadPool()
     {

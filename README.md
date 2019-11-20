@@ -1,4 +1,5 @@
 # k_means
+[![Build status](https://ci.appveyor.com/api/projects/status/405uogcy90af30ex?svg=true)](https://ci.appveyor.com/project/Defvyb/k-means)
 
 **Implementation of k_means algorithm;**
 

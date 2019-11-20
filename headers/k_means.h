@@ -16,12 +16,10 @@ struct Stat
 
 
 
-
-
 class KMeans final
 {
   public:
-    KMeans(ProgramOptions & options, StartCentroidsObtainer startCentroidsObtainer = KMeans::defaultKMeansStartCentroidsObtainer):m_options(options), m_pool(nullptr),
+    explicit KMeans(ProgramOptions & options, StartCentroidsObtainer startCentroidsObtainer = KMeans::defaultKMeansStartCentroidsObtainer):m_options(options), m_pool(nullptr),
         m_startCentroidsObtainer(startCentroidsObtainer)
     {
     }
@@ -29,6 +27,10 @@ class KMeans final
     {
         if(m_pool) delete m_pool;
     }
+    KMeans(KMeans const&) = delete;
+    KMeans& operator=(KMeans const&) = delete;
+
+
 
     bool clustering(CentroidsType & centroids) noexcept;
     Stat getStat() const noexcept;
