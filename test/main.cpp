@@ -51,6 +51,15 @@ TEST(KMeansTest, direct_cast_2Dim)
 
 }
 
+TEST(ParserTest, direct_negative_number1)
+{
+    std::vector<double> outVect;
+    std::string str = "-1.111";
+    ASSERT_TRUE(parsePoint(str.c_str(), outVect));
+
+   ASSERT_EQ(-1.111, outVect.front());
+}
+
 TEST(ParserTest, direct_case1)
 {
     std::vector<double> outVect;
@@ -63,8 +72,8 @@ TEST(ParserTest, direct_case1)
 TEST(ParserTest, direct_case2)
 {
     std::vector<double> outVect;
-    std::string str = "1.1 200";
-    ASSERT_TRUE(parsePoint(str.c_str(), outVect));
+    const char str[] = "1.1 200\0";
+    ASSERT_TRUE(parsePoint(str, outVect));
 
    ASSERT_EQ(1.1, outVect.front());
    ASSERT_EQ(200, outVect.back());
@@ -94,7 +103,7 @@ TEST(ParserTest, negative_case1001)
         str += std::to_string(i+i*0.1);
         str += " ";
     }
-    ASSERT_FALSE(parsePoint(str.c_str(), outVect));
+    ASSERT_FALSE(parsePointWithChecking(str.c_str(), outVect));
 
 }
 
@@ -102,7 +111,8 @@ TEST(ParserTest, negative_case0)
 {
     std::vector<double> outVect;
     std::string str = "";
-    ASSERT_TRUE(parsePoint(str.c_str(), outVect));
+    ASSERT_FALSE(parsePointWithChecking(str.c_str(), outVect));
 }
+
 
 

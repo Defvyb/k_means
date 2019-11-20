@@ -4,7 +4,7 @@
 #include <string>
 #include <iostream>
 #include <types.h>
-
+#include <math.h>
 static inline double getDouble(const char *& p)
 {
     while(*p == ' ') p++;
@@ -46,7 +46,7 @@ static inline bool parsePoint(const char * string, std::vector<double> & pointDi
        {
            pointDimensions.push_back(getDouble(p));
        }
-    return true;
+    return !pointDimensions.empty();
 }
 
 static inline bool parsePointWithChecking(const char * string, std::vector<double> & pointDimensions)
@@ -73,7 +73,8 @@ static inline bool parsePointWithChecking(const char * string, std::vector<doubl
            }
 
        }
-    return true;
+
+    return !pointDimensions.empty();
 }
 
 #endif
