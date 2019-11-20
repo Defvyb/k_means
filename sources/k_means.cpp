@@ -8,13 +8,11 @@
 
 bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, ProgramOptions & options, int lineCount) noexcept
 {
-    srand(static_cast<unsigned>(time(nullptr)));
-
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, lineCount);
 
-    int iterations = options.maxIterations;
+    int iterations;
 
     std::unordered_map<int, std::vector<double>> selectedCentroids;
     centroids.reserve(options.centroidsCount);
@@ -37,7 +35,7 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
     }
 
     options.fstream.clear();
-    options.fstream.seekg(0, options.fstream.beg);
+    options.fstream.seekg(0, std::ios_base::beg);
     int i=0;
     char line[MAX_LINE_LENGTH];
     while (options.fstream.getline(line, MAX_LINE_LENGTH))
@@ -170,7 +168,7 @@ bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & centroidsDistances) noexcept
 {
     m_options.fstream.clear();
-    m_options.fstream.seekg(0, m_options.fstream.beg);
+    m_options.fstream.seekg(0, std::ios_base::beg);
 
     initCentroids(centroidsSum, centroids);
 
