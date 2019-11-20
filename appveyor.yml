@@ -1,0 +1,22 @@
+image: Ubuntu
+
+version: "{build}"
+
+platform:
+    - x64
+    - x86
+
+configuration:
+- Release
+- Debug
+
+
+build_script:
+    - mkdir build_local
+    - cd build_local
+    - cmake --version
+    - cmake ..
+    - make
+
+
+test: off
