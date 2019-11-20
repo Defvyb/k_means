@@ -3,11 +3,16 @@
 #include <algorithm>
 #include <unordered_map>
 #include <chrono>
+#include <random>
 
 
 bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, ProgramOptions & options, int lineCount) noexcept
 {
     srand(static_cast<unsigned>(time(nullptr)));
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, lineCount);
 
     int iterations = options.maxIterations;
 
@@ -20,7 +25,7 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
         iterations = options.maxIterations;
         while(iterations)
         {
-            int val = rand()%(lineCount);
+            int val = dis(gen);
             if(selectedCentroids.find(val) == selectedCentroids.cend())
             {
                 selectedCentroids[val] = std::vector<double>();
