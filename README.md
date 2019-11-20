@@ -1,5 +1,7 @@
 # k_means
 [![Build status](https://ci.appveyor.com/api/projects/status/405uogcy90af30ex?svg=true)](https://ci.appveyor.com/project/Defvyb/k-means)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Defvyb_k_means&metric=alert_status)](https://sonarcloud.io/dashboard?id=Defvyb_k_means)
+
 
 **Implementation of k_means algorithm;**
 
