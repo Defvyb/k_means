@@ -42,7 +42,7 @@ static inline bool parsePoint(const char * string, std::vector<double> & pointDi
     pointDimensions.clear();
 
     const char* p = string;
-    for (double f = 0; *p != '\0'; )
+    while (*p != '\0')
        {
            pointDimensions.push_back(getDouble(p));
        }
