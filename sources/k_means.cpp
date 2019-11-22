@@ -135,16 +135,13 @@ Stat KMeans::getStat() const noexcept
 
 
 void KMeans::initCentroids(CentroidsSum & centroidsSum,
+                           CentroidsSumCount & centroidsSumCount,
                            const CentroidsType & centroids) noexcept
 {
-
-    for(int i=0; i < centroids.size(); ++i)
-    {
-        centroidsSum[i].first = centroids[i];
-        centroidsSum[i].second = 1;
-    }
+    std::copy(centroids.cbegin(), centroids.cend(), centroidsSum.begin());
+    centroidsSumCount.assign(centroids.size(), 1);
 }
-
+/*
 void KMeans::moveCentroids(CentroidsSum & centroidsSum,
                       CentroidsType & centroids) noexcept
 {
@@ -161,39 +158,38 @@ void KMeans::moveCentroids(CentroidsSum & centroidsSum,
         }
 
     }
-}
+}*/
 
 bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & curPointBuf,
                            CentroidsType & centroids,
                            CentroidsSum & centroidsSum,
+                           CentroidsSumCount & centroidsSumCount,
                            std::vector<double> & centroidsDistances) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, std::ios_base::beg);
 
-    initCentroids(centroidsSum, centroids);
+    initCentroids(centroidsSum, centroidsSumCount, centroids);
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
         if(parsePoint(lineBuf, curPointBuf))
         {
-            m_pool->start(curPointBuf);
-            while(!m_pool->ready())
-            {
-            }
+            m_pool->startCompute(curPointBuf);
+            while(!m_pool->ready());
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
                                 std::min_element(centroidsDistances.cbegin(), centroidsDistances.cend()));
 
-            std::transform(centroidsSum[foundCentroid].first.cbegin(),
-                           centroidsSum[foundCentroid].first.cend(),
+            std::transform(centroidsSum[foundCentroid].cbegin(),
+                           centroidsSum[foundCentroid].cend(),
                            curPointBuf.cbegin(),
-                           centroidsSum[foundCentroid].first.begin(),
+                           centroidsSum[foundCentroid].begin(),
                            std::plus<double>());
 
 
-            centroidsSum[foundCentroid].second++;
+            centroidsSumCount[foundCentroid]++;
         }
         else
         {
@@ -203,7 +199,10 @@ bool KMeans::calcCentroids(char * lineBuf,
 
 
     }
-    moveCentroids(centroidsSum, centroids);
+
+    m_pool->startMove();
+    while(!m_pool->ready());
+
     return true;
 }
 
@@ -223,19 +222,22 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     std::vector<double> centroidsDistances;
     centroidsDistances.resize(m_options.centroidsCount);
     CentroidsSum centroidsSum;
+    CentroidsSumCount centroidsSumCount;
+
     centroidsSum.resize(centroids.size());
+    centroidsSumCount.resize(centroids.size());
 
     if(m_pool)
     {
         delete m_pool;
         m_pool = nullptr;
     }
-    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances);
+    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances, centroidsSum, centroidsSumCount);
     while(true)
     {
-        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsDistances)) return false;
+        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsSumCount, centroidsDistances)) return false;
         centroidsNext = centroids;
-        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsDistances)) return false;
+        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsSumCount, centroidsDistances)) return false;
 
         m_iterations++;
         if(m_iterations >= m_options.maxIterations) break;
@@ -258,7 +260,7 @@ bool KMeans::centroidsEqual(const CentroidsType & centroidsObjects,const Centroi
     auto centroid = centroidsObjects.cbegin();
     auto centroidNext = centroidObjectsNext.cbegin();
 
-    for(; centroid != centroidsObjects.cend() && centroidNext != centroidObjectsNext.cend(); ++centroid, ++centroidNext)
+    for(; centroid != centroidsObjects.cend(); ++centroid, ++centroidNext)
     {
         if(!std::equal(centroid->cbegin(), centroid->cend(), centroidNext->cbegin()))
         {

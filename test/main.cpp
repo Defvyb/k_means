@@ -8,20 +8,18 @@ int main(int argc, char * argv [])
     return RUN_ALL_TESTS();
 }
 
-
-
 TEST(KMeansTest, direct_cast_2Dim)
 {
     int lineCount = 15;
-    {
-        std::ofstream testStream("test");
-        ASSERT_TRUE(testStream.is_open());
 
-        for(int i=0; i<(lineCount*2); i++,i++)
-        {
-            testStream <<i+1 << " " << i+2<<"\n";
-        }
+    std::ofstream testStream("test");
+    ASSERT_TRUE(testStream.is_open());
+
+    for(int i=0; i<(lineCount*2); i++,i++)
+    {
+        testStream <<i+1 << " " << i+2<<"\n";
     }
+    testStream.close();
 
     ProgramOptions options;
     options.centroidsCount = 2;

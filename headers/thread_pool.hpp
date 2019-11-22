@@ -7,13 +7,13 @@
 #include <math.h>
 #include <types.h>
 
-static double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
+static inline double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
     auto pointDim = pointDimensions->cbegin();
     auto centerDim = centerDimentions.cbegin();
 
     double sumOfPow = 0;
-    for(;pointDim != pointDimensions->cend() && centerDim != centerDimentions.cend();
+    for(;pointDim != pointDimensions->cend();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
@@ -22,16 +22,28 @@ static double tpCompute(const std::vector<double> * pointDimensions, const std::
 
 }
 
+
+
 class ThreadPool final
 {
 public:
+
+    enum TaskType
+    {
+      TASK_TYPE_COMPUTE,
+      TASK_TYPE_MOVE
+    };
     explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
-               std::vector<double> & centroidsDistances)
+               std::vector<double> & centroidsDistances,
+                CentroidsSum & centroidsSum,
+                CentroidsSumCount & sumCount)
         :m_stop(false),
           m_pointDimensions(nullptr),
           m_centroids(centroids),
           m_centroidsDistances(centroidsDistances),
+          m_centroidsSum(centroidsSum),
+          m_sumCount(sumCount),
           m_threads(threads),
           readyMask(0),
           act(0)
@@ -49,8 +61,8 @@ public:
                     {
                         if( act & (1 << i))
                         {
-                            int size = m_centroids.size();
-                            int numOperations = size/m_threads;
+                            static int size = m_centroids.size();
+                            static int numOperations = size/m_threads;
                             int maxOperations;
                             if(i+1 == m_threads)
                             {
@@ -60,11 +72,29 @@ public:
                             {
                                 maxOperations = ((i+1)*numOperations);
                             }
-                            for(int j = i*numOperations; j < maxOperations; ++j )
-                            {
-                                (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centroids)[j]);
-                            }
 
+                            if(m_taskType == TASK_TYPE_COMPUTE)
+                            {
+
+                                for(int j = i*numOperations; j < maxOperations; ++j )
+                                {
+                                    (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centroids)[j]);
+                                }
+                            }
+                            else
+                            {
+                                for(int j = i*numOperations; j < maxOperations; ++j )
+                                {
+                                    auto centroidSumDimension = m_centroidsSum[j].cbegin();
+                                    auto centroidDimension = m_centroids[j].begin();
+
+                                    for(; centroidSumDimension != m_centroidsSum[j].cend();
+                                        ++centroidSumDimension, ++centroidDimension)
+                                    {
+                                        *centroidDimension = *centroidSumDimension / m_centroidsDistances[j];
+                                    }
+                                }
+                            }
 
                             act ^= (1 << i);
                         }
@@ -90,9 +120,16 @@ public:
     }
 
 
-    void start(std::vector<double> & pointDimensions)
+    void startCompute(std::vector<double> & pointDimensions)
     {
+        m_taskType = TASK_TYPE_COMPUTE;
         m_pointDimensions = &pointDimensions;
+        act = readyMask;
+    }
+
+    void startMove()
+    {
+        m_taskType = TASK_TYPE_MOVE;
         act = readyMask;
     }
 
@@ -109,10 +146,13 @@ private:
     std::vector<double> * m_pointDimensions;
     CentroidsType & m_centroids;
     std::vector<double> & m_centroidsDistances;
+    CentroidsSum & m_centroidsSum;
+    CentroidsSumCount & m_sumCount;
 
     int m_threads;
     uint32_t readyMask;
     std::atomic<uint32_t> act;
+    TaskType m_taskType;
 };
 
 

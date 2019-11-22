@@ -15,7 +15,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
             CXX_STANDARD 11
             )
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
-set(CMAKE_CXX_FLAGS "-Ofast")
+#set(CMAKE_CXX_FLAGS "-Og")
 
 find_package(GTest)
 if(GTest_FOUND)

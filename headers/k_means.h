@@ -42,9 +42,11 @@ private:
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
                         CentroidsSum & centroidsSum,
+                        CentroidsSumCount & centroidsSumCount,
                         std::vector<double> & dists) noexcept;
     bool centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept;
     void initCentroids(CentroidsSum & centroidsSum,
+                       CentroidsSumCount & centroidsSumCount,
                           const CentroidsType & centroids) noexcept;
     void moveCentroids(CentroidsSum & centroidsSum,
                           CentroidsType & centroids) noexcept;
