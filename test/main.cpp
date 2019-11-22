@@ -84,9 +84,9 @@ TEST(ParserTest, direct_case1000)
     std::vector<double> outVect;
 
     std::string str;
-    for(double i = 0; i < 1000; i++)
+    for(int i = 0; i < 1000; i++)
     {
-        str += std::to_string(i+i*0.1);
+        str += std::to_string(static_cast<double>(i)+static_cast<double>(i)*0.1);
         str += " ";
     }
     ASSERT_TRUE(parsePoint(str.c_str(), outVect));
@@ -98,9 +98,9 @@ TEST(ParserTest, negative_case1001)
     std::vector<double> outVect;
 
     std::string str;
-    for(double i = 0; i < 1001; i++)
+    for(int i = 0; i < 1001; i++)
     {
-        str += std::to_string(i+i*0.1);
+        str += std::to_string(static_cast<double>(i)+static_cast<double>(i)*0.1);
         str += " ";
     }
     ASSERT_FALSE(parsePointWithChecking(str.c_str(), outVect));

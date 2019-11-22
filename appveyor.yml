@@ -4,7 +4,6 @@ version: "{build}"
 
 platform:
     - x64
-    - x86
 
 configuration:
 - Release
@@ -16,15 +15,29 @@ before_build:
  - sudo cmake CMakeLists.txt
  - sudo make
  - sudo cp *.a /usr/lib
- - cd ${APPVEYOR_BUILD_FOLDER}
+ - export SONAR_SCANNER_VERSION=4.2.0.1873
+ - export SONAR_SCANNER_HOME=$HOME/.sonar/sonar-scanner-$SONAR_SCANNER_VERSION-linux
+ - rm -rf $SONAR_SCANNER_HOME
+ - mkdir -p $SONAR_SCANNER_HOME
+ - curl -sSLo $HOME/.sonar/sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_SCANNER_VERSION-linux.zip
+ - unzip $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
+ - rm $HOME/.sonar/sonar-scanner.zip
+ - export PATH=$SONAR_SCANNER_HOME/bin:$PATH
+ - export SONAR_SCANNER_OPTS="-server"
 
 build_script:
+    - cd ${APPVEYOR_BUILD_FOLDER}
     - mkdir build_local
     - cd build_local
     - cmake --version
     - cmake ..
-    - make
+    - wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+    - unzip build-wrapper-linux-x86.zip
+    - cp ./build-wrapper-linux-x86/libinterceptor-x86_64.so ./build-wrapper-linux-x86/libinterceptor-haswell.so
+    - ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir build_wrapper make clean all
     - make test
+    - cd ..
+    - sonar-scanner
 
 
 test: off

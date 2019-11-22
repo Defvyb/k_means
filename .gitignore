@@ -3,4 +3,3 @@ build
 CMakeLists.txt.user
 .scannerwork
 cppcheck-report.xml
-sonar-project.properties
