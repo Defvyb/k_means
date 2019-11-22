@@ -48,3 +48,5 @@ Usage:
     -k=<kluster centroids count>(Default: 10)
     -m=<max iterations>(Default: 1000000)
     -o=<filename>(Default: output.file)
+    -n not to check file. Will slightly increase speed(Default: is false)
+    -h help
