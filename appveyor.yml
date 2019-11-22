@@ -17,6 +17,7 @@ build_script:
     - cmake --version
     - cmake ..
     - make
+    - make test
 
 
 test: off

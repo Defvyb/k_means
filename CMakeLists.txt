@@ -18,4 +18,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 set(CMAKE_CXX_FLAGS "-O2")
 
-#add_subdirectory(test)
+find_package(GTest)
+if(GTest_FOUND)
+    enable_testing()
+    message("GTest found, tests will be compiled")
+    add_subdirectory(test)
+endif()
