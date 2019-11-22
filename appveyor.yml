@@ -10,6 +10,13 @@ configuration:
 - Release
 - Debug
 
+before_build:
+ - sudo apt -y install libgtest-dev
+ - cd /usr/src/gtest
+ - sudo cmake CMakeLists.txt
+ - sudo make
+ - sudo cp *.a /usr/lib
+ - cd ${APPVEYOR_BUILD_FOLDER}
 
 build_script:
     - mkdir build_local
