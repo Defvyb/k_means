@@ -8,7 +8,8 @@ int main(int argc, char * argv [])
     return RUN_ALL_TESTS();
 }
 
-TEST(KMeansTest, direct_cast_2Dim)
+
+TEST(KMeansTest, direct_cast_2Dim_1th)
 {
     int lineCount = 15;
 
@@ -23,7 +24,8 @@ TEST(KMeansTest, direct_cast_2Dim)
 
     ProgramOptions options;
     options.centroidsCount = 2;
-    options.threadPoolSize = 1;
+    options.threadPoolSize = 2;
+
 
     options.fstream =  std::ifstream("test");
 
@@ -48,6 +50,8 @@ TEST(KMeansTest, direct_cast_2Dim)
     ASSERT_EQ(23, resultCentroids.back().back());
 
 }
+
+
 
 TEST(ParserTest, direct_negative_number1)
 {

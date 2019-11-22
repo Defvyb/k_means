@@ -22,7 +22,7 @@ struct ProgramOptions final
 
 typedef std::vector<std::vector<double>> CentroidsType ;
 typedef std::vector<std::vector<double>> CentroidsSum;
-typedef std::vector<int> CentroidsSumCount;
+typedef std::vector<double> CentroidsSumCount;
 
 typedef std::function<bool (CentroidsType & , ProgramOptions & , int ) > StartCentroidsObtainer;
 

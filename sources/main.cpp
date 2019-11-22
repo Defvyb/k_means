@@ -43,6 +43,8 @@ int main(int argc, char *argv[])
     }
 
 
+    std::cout << "clustering iterations: " << means.getStat().m_iterations << "\n";
+    std::cout << "clustering duration: " << means.getStat().m_duration << " microseconds\n";
     std::cout << "clustering duration per iteration: " << means.getStat().getDurationPerIteration() << " microseconds\n";
 	return 0;
 }

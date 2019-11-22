@@ -44,27 +44,28 @@ public:
           m_centroidsDistances(centroidsDistances),
           m_centroidsSum(centroidsSum),
           m_centroidsSumCount(centroidsSumCount),
-          m_threads(threads),
           readyMask(0),
-          act(0)
+          act(0),
+          m_taskType(TASK_TYPE_COMPUTE)
     {
-        for(int i=0; i<m_threads; ++i)
+        for(int i=0; i<threads; ++i)
         {
             readyMask |= 1<<i;
         }
 
+        int size = m_centroids.size();
+        int numOperations = size/threads;
+
         for(size_t i = 0; i<threads ;++i)
             workers.emplace_back(
-                [this, i, threads]
+                [this, i, threads, size, numOperations]
                 {
                     for(;;)
                     {
-                        if( act & (1 << i))
+                        if( act.load(std::memory_order_relaxed) & (1U << i))
                         {
-                            static int size = m_centroids.size();
-                            static int numOperations = size/m_threads;
-                            int maxOperations;
-                            if(i+1 == m_threads)
+                            int maxOperations = 0;
+                            if(i+1 == threads)
                             {
                                 maxOperations = size;
                             }
@@ -78,7 +79,7 @@ public:
 
                                 for(int j = i*numOperations; j < maxOperations; ++j )
                                 {
-                                    (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centroids)[j]);
+                                    m_centroidsDistances[j] = tpCompute(m_pointDimensions, m_centroids[j]);
                                 }
                             }
                             else
@@ -96,9 +97,9 @@ public:
                                 }
                             }
 
-                            act ^= (1 << i);
+                            std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed );
                         }
-                        if(m_stop.load()) return;
+                        if(m_stop.load(std::memory_order_relaxed)) return;
                     }
 
                 }
@@ -124,18 +125,18 @@ public:
     {
         m_taskType = TASK_TYPE_COMPUTE;
         m_pointDimensions = &pointDimensions;
-        act = readyMask;
+        act.store(readyMask, std::memory_order_relaxed);
     }
 
     void startMove()
     {
         m_taskType = TASK_TYPE_MOVE;
-        act = readyMask;
+        act.store(readyMask, std::memory_order_relaxed);
     }
 
     bool ready()
     {
-       return act == 0;
+       return act.load(std::memory_order_relaxed) == 0;
     }
 
 
@@ -149,7 +150,6 @@ private:
     CentroidsSum & m_centroidsSum;
     CentroidsSumCount & m_centroidsSumCount;
 
-    int m_threads;
     uint32_t readyMask;
     std::atomic<uint32_t> act;
     TaskType m_taskType;

@@ -85,7 +85,7 @@ bool KMeans::inspectFile() noexcept
     std::vector<double> pointDimensions;
     pointDimensions.reserve(1000);
 
-    auto parsePointFunc = m_options.checkFile ? &parsePoint : &parsePointWithChecking;
+    auto parsePointFunc = m_options.checkFile ? &parsePointWithChecking : &parsePoint;
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
 
@@ -139,7 +139,7 @@ void KMeans::initCentroids(CentroidsSum & centroidsSum,
                            const CentroidsType & centroids) noexcept
 {
     std::copy(centroids.cbegin(), centroids.cend(), centroidsSum.begin());
-    centroidsSumCount.assign(centroids.size(), 1);
+    centroidsSumCount.assign(centroids.size(), 1.0);
 }
 
 void KMeans::moveCentroids(CentroidsSum & centroidsSum,
@@ -176,8 +176,10 @@ bool KMeans::calcCentroids(char * lineBuf,
     {
         if(parsePoint(lineBuf, curPointBuf))
         {
+
             m_pool->startCompute(curPointBuf);
             while(!m_pool->ready());
+
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
                                 std::min_element(centroidsDistances.cbegin(), centroidsDistances.cend()));
@@ -197,11 +199,17 @@ bool KMeans::calcCentroids(char * lineBuf,
             return false;
         }
 
-
     }
-    moveCentroids(centroidsSum, centroidsSumCount, centroids);
-  /*  m_pool->startMove();
-    while(!m_pool->ready());*/
+    if(m_options.threadPoolSize == 1)
+    {
+        moveCentroids(centroidsSum, centroidsSumCount, centroids);
+    }
+    else
+    {
+        m_pool->startMove();
+        while(!m_pool->ready());
+    }
+
 
     return true;
 }
@@ -209,7 +217,7 @@ bool KMeans::calcCentroids(char * lineBuf,
 
 bool KMeans::doClustering(CentroidsType & centroids) noexcept
 {
-    char lineBuf[MAX_LINE_LENGTH];
+    static char lineBuf[MAX_LINE_LENGTH] ={0};
 
     std::vector<double> curPoint;
     curPoint.reserve(1000);
