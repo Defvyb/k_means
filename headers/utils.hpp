@@ -12,6 +12,7 @@ void printHelp()
     std::cout << "       -k=<centroids count>(Default: 10) \n";
     std::cout << "       -m=<max iterations>(Default: 1000000) \n";
     std::cout << "       -o=<filename>(Default: output.file) \n";
+    std::cout << "       -n not to check file. Will slightly increase speed(Default: is false) \n";
     std::cout << "       -h this help  \n";
 }
 
@@ -85,6 +86,13 @@ bool getProgramOptions(int argc, char *argv[],  ProgramOptions & options) noexce
         if(findResult != std::string::npos)
         {
             options.outputFileName = arg.substr(arg.find_first_of("=")+1);
+        }
+
+        findResult = arg.find("-n");
+        if(findResult != std::string::npos)
+        {
+            std::cout << "WARN: switching off file checking will lead to undefined behavior \n";
+            options.checkFile = false;
         }
     }
     if(filename.empty())

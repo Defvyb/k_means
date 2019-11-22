@@ -13,10 +13,9 @@ target_link_libraries(${PROJECT_NAME} pthread)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
             CXX_STANDARD 11
-            CXX_EXTENSIONS ON
             )
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
-set(CMAKE_CXX_FLAGS "-O2")
+set(CMAKE_CXX_FLAGS "-Ofast")
 
 find_package(GTest)
 if(GTest_FOUND)

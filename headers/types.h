@@ -8,7 +8,7 @@ static const int MAX_ELEMENT_COUNT = 1000;
 const int MAX_LINE_LENGTH = 32000;
 struct ProgramOptions final
 {
-    ProgramOptions(): threadPoolSize(1), centroidsCount(10), maxIterations(1000000), outputFileName("output.file")
+    ProgramOptions(): threadPoolSize(1), centroidsCount(10), maxIterations(1000000), outputFileName("output.file"), checkFile(true)
     {}
 
     std::ifstream fstream;
@@ -16,6 +16,7 @@ struct ProgramOptions final
     uint16_t centroidsCount;
     int maxIterations;
     std::string outputFileName;
+    bool checkFile;
 
 };
 

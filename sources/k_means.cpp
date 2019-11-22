@@ -84,12 +84,14 @@ bool KMeans::inspectFile() noexcept
     int elementsCount = 0;
     std::vector<double> pointDimensions;
     pointDimensions.reserve(1000);
+
+    auto parsePointFunc = m_options.checkFile ? &parsePoint : &parsePointWithChecking;
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
 
         m_lineCount++;
 
-        if(parsePointWithChecking(line, pointDimensions))
+        if(parsePointFunc(line, pointDimensions))
         {
             if(!elementsCount)
             {
