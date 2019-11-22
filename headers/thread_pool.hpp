@@ -37,13 +37,13 @@ public:
                CentroidsType  & centroids,
                std::vector<double> & centroidsDistances,
                 CentroidsSum & centroidsSum,
-                CentroidsSumCount & sumCount)
+                CentroidsSumCount & centroidsSumCount)
         :m_stop(false),
           m_pointDimensions(nullptr),
           m_centroids(centroids),
           m_centroidsDistances(centroidsDistances),
           m_centroidsSum(centroidsSum),
-          m_sumCount(sumCount),
+          m_centroidsSumCount(centroidsSumCount),
           m_threads(threads),
           readyMask(0),
           act(0)
@@ -91,7 +91,7 @@ public:
                                     for(; centroidSumDimension != m_centroidsSum[j].cend();
                                         ++centroidSumDimension, ++centroidDimension)
                                     {
-                                        *centroidDimension = *centroidSumDimension / m_centroidsDistances[j];
+                                        *centroidDimension = *centroidSumDimension / m_centroidsSumCount[j];
                                     }
                                 }
                             }
@@ -147,7 +147,7 @@ private:
     CentroidsType & m_centroids;
     std::vector<double> & m_centroidsDistances;
     CentroidsSum & m_centroidsSum;
-    CentroidsSumCount & m_sumCount;
+    CentroidsSumCount & m_centroidsSumCount;
 
     int m_threads;
     uint32_t readyMask;
