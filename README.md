@@ -50,5 +50,3 @@ Usage:
     -o=<filename>(Default: output.file)
     -n not to check file. Will slightly increase speed(Default: is false)
     -h help
-    
-<meta name="google-site-verification" content="fFi3pfqE3X7kJlCn6qfEIttaWN2aaru2LvV8GJtIBl8" />
