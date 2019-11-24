@@ -7,7 +7,7 @@ https://github.com/Defvyb/k_means
 
 
 
-**Implementation of k_means algorithm;**
+**C++(CPP) Implementation of k_means algorithm;**
 
 Input dataset format:
 
