@@ -177,8 +177,18 @@ bool KMeans::calcCentroids(char * lineBuf,
         if(parsePoint(lineBuf, curPointBuf))
         {
 
-            m_pool->startCompute(curPointBuf);
-            while(!m_pool->ready());
+            if(m_options.threadPoolSize == 1)
+            {
+                for(int i = 0; i < centroids.size(); ++i )
+                {
+                    centroidsDistances[i] = tpCompute(&curPointBuf, centroids[i]);
+                }
+            }
+            else
+            {
+                m_pool->startCompute(curPointBuf);
+                while(!m_pool->ready());
+            }
 
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
@@ -235,12 +245,16 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     centroidsSum.resize(centroids.size());
     centroidsSumCount.resize(centroids.size());
 
-    if(m_pool)
+    if(m_options.threadPoolSize > 1 )
     {
-        delete m_pool;
-        m_pool = nullptr;
+        if(m_pool)
+        {
+            delete m_pool;
+            m_pool = nullptr;
+        }
+        m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances, centroidsSum, centroidsSumCount);
     }
-    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances, centroidsSum, centroidsSumCount);
+
     while(true)
     {
         centroidsPrev = centroids;
