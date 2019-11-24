@@ -10,7 +10,7 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, lineCount);
+    std::uniform_int_distribution<> dis(0, lineCount-1);
 
     int iterations;
 
@@ -222,8 +222,8 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     std::vector<double> curPoint;
     curPoint.reserve(1000);
 
-    CentroidsType centroidsNext;
-    centroidsNext.reserve(centroids.size());
+    CentroidsType centroidsPrev;
+    centroidsPrev.reserve(centroids.size());
 
     m_iterations = 0;
 
@@ -243,20 +243,14 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances, centroidsSum, centroidsSumCount);
     while(true)
     {
+        centroidsPrev = centroids;
         if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsSumCount, centroidsDistances)) return false;
-        centroidsNext = centroids;
-        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsSumCount, centroidsDistances)) return false;
 
         m_iterations++;
         if(m_iterations >= m_options.maxIterations) break;
-        if(centroids == centroidsNext)
+        if(centroids == centroidsPrev)
         {
-            centroids = centroidsNext;
             break;
-        }
-        else
-        {
-            centroids = centroidsNext;
         }
     }
     m_stat.m_iterations = m_iterations;
