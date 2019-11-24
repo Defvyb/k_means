@@ -7,19 +7,20 @@
 #include <math.h>
 #include <types.h>
 
+
 static inline double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
     auto pointDim = pointDimensions->cbegin();
     auto centerDim = centerDimentions.cbegin();
 
-    double sumOfPow = 0;
+    static double sumOfPow;
+    sumOfPow=0;
     for(;pointDim != pointDimensions->cend();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
     }
     return sqrt(sumOfPow);
-
 }
 
 

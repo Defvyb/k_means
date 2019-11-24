@@ -61,12 +61,11 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
 
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
-    auto t1 = std::chrono::high_resolution_clock::now();
-
     if(!inspectFile()) return false;
     if(!m_startCentroidsObtainer(centroids, m_options, m_lineCount)) return false;
-    if(!doClustering(centroids)) return false;
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+    if(!doClustering(centroids)) return false;
     auto t2 = std::chrono::high_resolution_clock::now();
     m_stat.m_duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 
