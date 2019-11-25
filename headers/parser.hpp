@@ -34,7 +34,6 @@ static inline double getDouble(const char *& p)
     if (neg) {
         r = -r;
     }
-    p++;
     return r;
 }
 static inline bool parsePoint(const char * string, std::vector<double> & pointDimensions)

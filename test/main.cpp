@@ -9,23 +9,23 @@ int main(int argc, char * argv [])
 }
 
 
-
-TEST(KMeansTest, direct_cast_2Dim)
+TEST(KMeansTest, direct_cast_2Dim_1th)
 {
     int lineCount = 15;
-    {
-        std::ofstream testStream("test");
-        ASSERT_TRUE(testStream.is_open());
 
-        for(int i=0; i<(lineCount*2); i++,i++)
-        {
-            testStream <<i+1 << " " << i+2<<"\n";
-        }
+    std::ofstream testStream("test");
+    ASSERT_TRUE(testStream.is_open());
+
+    for(int i=0; i<(lineCount*2); i++,i++)
+    {
+        testStream <<i+1 << " " << i+2<<"\n";
     }
+    testStream.close();
 
     ProgramOptions options;
     options.centroidsCount = 2;
-    options.threadPoolSize = 1;
+    options.threadPoolSize = 2;
+
 
     options.fstream =  std::ifstream("test");
 
@@ -50,6 +50,8 @@ TEST(KMeansTest, direct_cast_2Dim)
     ASSERT_EQ(23, resultCentroids.back().back());
 
 }
+
+
 
 TEST(ParserTest, direct_negative_number1)
 {

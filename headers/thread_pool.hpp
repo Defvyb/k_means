@@ -7,52 +7,66 @@
 #include <math.h>
 #include <types.h>
 
-static double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
+
+static inline double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
     auto pointDim = pointDimensions->cbegin();
     auto centerDim = centerDimentions.cbegin();
 
-    double sumOfPow = 0;
-    for(;pointDim != pointDimensions->cend() && centerDim != centerDimentions.cend();
+    static double sumOfPow;
+    sumOfPow=0;
+    for(;pointDim != pointDimensions->cend();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
     }
     return sqrt(sumOfPow);
-
 }
+
+
 
 class ThreadPool final
 {
 public:
+
+    enum TaskType
+    {
+      TASK_TYPE_COMPUTE,
+      TASK_TYPE_MOVE
+    };
     explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
-               std::vector<double> & centroidsDistances)
+               std::vector<double> & centroidsDistances,
+                CentroidsSum & centroidsSum,
+                CentroidsSumCount & centroidsSumCount)
         :m_stop(false),
           m_pointDimensions(nullptr),
           m_centroids(centroids),
           m_centroidsDistances(centroidsDistances),
-          m_threads(threads),
+          m_centroidsSum(centroidsSum),
+          m_centroidsSumCount(centroidsSumCount),
           readyMask(0),
-          act(0)
+          act(0),
+          m_taskType(TASK_TYPE_COMPUTE)
     {
-        for(int i=0; i<m_threads; ++i)
+        for(int i=0; i<threads; ++i)
         {
             readyMask |= 1<<i;
         }
 
+        int size = m_centroids.size();
+        int numOperations = size/threads;
+
         for(size_t i = 0; i<threads ;++i)
             workers.emplace_back(
-                [this, i, threads]
+                [this, i, threads, size, numOperations]
                 {
                     for(;;)
                     {
-                        if( act & (1 << i))
+                        if( act.load(std::memory_order_relaxed) & (1U << i))
                         {
-                            int size = m_centroids.size();
-                            int numOperations = size/m_threads;
-                            int maxOperations;
-                            if(i+1 == m_threads)
+                            int maxOperations = 0;
+                            if(i+1 == threads)
                             {
                                 maxOperations = size;
                             }
@@ -60,15 +74,33 @@ public:
                             {
                                 maxOperations = ((i+1)*numOperations);
                             }
-                            for(int j = i*numOperations; j < maxOperations; ++j )
+
+                            if(m_taskType == TASK_TYPE_COMPUTE)
                             {
-                                (m_centroidsDistances)[j] = tpCompute(m_pointDimensions, (m_centroids)[j]);
+
+                                for(int j = i*numOperations; j < maxOperations; ++j )
+                                {
+                                    m_centroidsDistances[j] = tpCompute(m_pointDimensions, m_centroids[j]);
+                                }
+                            }
+                            else
+                            {
+                                for(int j = i*numOperations; j < maxOperations; ++j )
+                                {
+                                    auto centroidSumDimension = m_centroidsSum[j].cbegin();
+                                    auto centroidDimension = m_centroids[j].begin();
+
+                                    for(; centroidSumDimension != m_centroidsSum[j].cend();
+                                        ++centroidSumDimension, ++centroidDimension)
+                                    {
+                                        *centroidDimension = *centroidSumDimension / m_centroidsSumCount[j];
+                                    }
+                                }
                             }
 
-
-                            act ^= (1 << i);
+                            std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed );
                         }
-                        if(m_stop.load()) return;
+                        if(m_stop.load(std::memory_order_relaxed)) return;
                     }
 
                 }
@@ -90,15 +122,22 @@ public:
     }
 
 
-    void start(std::vector<double> & pointDimensions)
+    void startCompute(std::vector<double> & pointDimensions)
     {
+        m_taskType = TASK_TYPE_COMPUTE;
         m_pointDimensions = &pointDimensions;
-        act = readyMask;
+        act.store(readyMask, std::memory_order_relaxed);
+    }
+
+    void startMove()
+    {
+        m_taskType = TASK_TYPE_MOVE;
+        act.store(readyMask, std::memory_order_relaxed);
     }
 
     bool ready()
     {
-       return act == 0;
+       return act.load(std::memory_order_relaxed) == 0;
     }
 
 
@@ -109,10 +148,12 @@ private:
     std::vector<double> * m_pointDimensions;
     CentroidsType & m_centroids;
     std::vector<double> & m_centroidsDistances;
+    CentroidsSum & m_centroidsSum;
+    CentroidsSumCount & m_centroidsSumCount;
 
-    int m_threads;
     uint32_t readyMask;
     std::atomic<uint32_t> act;
+    TaskType m_taskType;
 };
 
 

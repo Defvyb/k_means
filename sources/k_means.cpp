@@ -10,7 +10,7 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, lineCount);
+    std::uniform_int_distribution<> dis(0, lineCount-1);
 
     int iterations;
 
@@ -61,12 +61,11 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
 
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
-    auto t1 = std::chrono::high_resolution_clock::now();
-
     if(!inspectFile()) return false;
     if(!m_startCentroidsObtainer(centroids, m_options, m_lineCount)) return false;
-    if(!doClustering(centroids)) return false;
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+    if(!doClustering(centroids)) return false;
     auto t2 = std::chrono::high_resolution_clock::now();
     m_stat.m_duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 
@@ -85,7 +84,7 @@ bool KMeans::inspectFile() noexcept
     std::vector<double> pointDimensions;
     pointDimensions.reserve(1000);
 
-    auto parsePointFunc = m_options.checkFile ? &parsePoint : &parsePointWithChecking;
+    auto parsePointFunc = m_options.checkFile ? &parsePointWithChecking : &parsePoint;
     while (m_options.fstream.getline(line, MAX_LINE_LENGTH))
     {
 
@@ -135,29 +134,26 @@ Stat KMeans::getStat() const noexcept
 
 
 void KMeans::initCentroids(CentroidsSum & centroidsSum,
+                           CentroidsSumCount & centroidsSumCount,
                            const CentroidsType & centroids) noexcept
 {
-
-    for(int i=0; i < centroids.size(); ++i)
-    {
-        centroidsSum[i].first = centroids[i];
-        centroidsSum[i].second = 1;
-    }
+    std::copy(centroids.cbegin(), centroids.cend(), centroidsSum.begin());
+    centroidsSumCount.assign(centroids.size(), 1.0);
 }
 
 void KMeans::moveCentroids(CentroidsSum & centroidsSum,
+                           CentroidsSumCount & centroidsSumCount,
                       CentroidsType & centroids) noexcept
 {
     for(int i=0; i < centroids.size(); ++i)
     {
-        auto centroidSumDimension = centroidsSum[i].first.cbegin();
+        auto centroidSumDimension = centroidsSum[i].cbegin();
         auto centroidDimension = centroids[i].begin();
 
-        for(; centroidSumDimension != centroidsSum[i].first.cend() &&
-              centroidDimension != centroids[i].end();
+        for(; centroidSumDimension != centroidsSum[i].cend() ;
             ++centroidSumDimension, ++centroidDimension)
         {
-            *centroidDimension = *centroidSumDimension / centroidsSum[i].second;
+            *centroidDimension = *centroidSumDimension / centroidsSumCount[i];
         }
 
     }
@@ -167,33 +163,44 @@ bool KMeans::calcCentroids(char * lineBuf,
                            std::vector<double> & curPointBuf,
                            CentroidsType & centroids,
                            CentroidsSum & centroidsSum,
+                           CentroidsSumCount & centroidsSumCount,
                            std::vector<double> & centroidsDistances) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, std::ios_base::beg);
 
-    initCentroids(centroidsSum, centroids);
+    initCentroids(centroidsSum, centroidsSumCount, centroids);
 
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
         if(parsePoint(lineBuf, curPointBuf))
         {
-            m_pool->start(curPointBuf);
-            while(!m_pool->ready())
+
+            if(m_options.threadPoolSize == 1)
             {
+                for(int i = 0; i < centroids.size(); ++i )
+                {
+                    centroidsDistances[i] = tpCompute(&curPointBuf, centroids[i]);
+                }
             }
+            else
+            {
+                m_pool->startCompute(curPointBuf);
+                while(!m_pool->ready());
+            }
+
 
             int foundCentroid = std::distance(centroidsDistances.cbegin(),
                                 std::min_element(centroidsDistances.cbegin(), centroidsDistances.cend()));
 
-            std::transform(centroidsSum[foundCentroid].first.cbegin(),
-                           centroidsSum[foundCentroid].first.cend(),
+            std::transform(centroidsSum[foundCentroid].cbegin(),
+                           centroidsSum[foundCentroid].cend(),
                            curPointBuf.cbegin(),
-                           centroidsSum[foundCentroid].first.begin(),
+                           centroidsSum[foundCentroid].begin(),
                            std::plus<double>());
 
 
-            centroidsSum[foundCentroid].second++;
+            centroidsSumCount[foundCentroid]++;
         }
         else
         {
@@ -201,69 +208,65 @@ bool KMeans::calcCentroids(char * lineBuf,
             return false;
         }
 
-
     }
-    moveCentroids(centroidsSum, centroids);
+    if(m_options.threadPoolSize == 1)
+    {
+        moveCentroids(centroidsSum, centroidsSumCount, centroids);
+    }
+    else
+    {
+        m_pool->startMove();
+        while(!m_pool->ready());
+    }
+
+
     return true;
 }
 
 
 bool KMeans::doClustering(CentroidsType & centroids) noexcept
 {
-    char lineBuf[MAX_LINE_LENGTH];
+    static char lineBuf[MAX_LINE_LENGTH] ={0};
 
     std::vector<double> curPoint;
     curPoint.reserve(1000);
 
-    CentroidsType centroidsNext;
-    centroidsNext.reserve(centroids.size());
+    CentroidsType centroidsPrev;
+    centroidsPrev.reserve(centroids.size());
 
     m_iterations = 0;
 
     std::vector<double> centroidsDistances;
     centroidsDistances.resize(m_options.centroidsCount);
     CentroidsSum centroidsSum;
-    centroidsSum.resize(centroids.size());
+    CentroidsSumCount centroidsSumCount;
 
-    if(m_pool)
+    centroidsSum.resize(centroids.size());
+    centroidsSumCount.resize(centroids.size());
+
+    if(m_options.threadPoolSize > 1 )
     {
-        delete m_pool;
-        m_pool = nullptr;
+        if(m_pool)
+        {
+            delete m_pool;
+            m_pool = nullptr;
+        }
+        m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances, centroidsSum, centroidsSumCount);
     }
-    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsDistances);
+
     while(true)
     {
-        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsDistances)) return false;
-        centroidsNext = centroids;
-        if(!calcCentroids(lineBuf, curPoint, centroidsNext, centroidsSum, centroidsDistances)) return false;
+        centroidsPrev = centroids;
+        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsSumCount, centroidsDistances)) return false;
 
         m_iterations++;
         if(m_iterations >= m_options.maxIterations) break;
-        if(centroidsEqual(centroids, centroidsNext))
+        if(centroids == centroidsPrev)
         {
-            centroids = centroidsNext;
             break;
-        }
-        else
-        {
-            centroids = centroidsNext;
         }
     }
     m_stat.m_iterations = m_iterations;
     return true;
 }
 
-bool KMeans::centroidsEqual(const CentroidsType & centroidsObjects,const CentroidsType & centroidObjectsNext) noexcept
-{
-    auto centroid = centroidsObjects.cbegin();
-    auto centroidNext = centroidObjectsNext.cbegin();
-
-    for(; centroid != centroidsObjects.cend() && centroidNext != centroidObjectsNext.cend(); ++centroid, ++centroidNext)
-    {
-        if(!std::equal(centroid->cbegin(), centroid->cend(), centroidNext->cbegin()))
-        {
-            return false;
-        }
-    }
-    return true;
-}
