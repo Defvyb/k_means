@@ -36,15 +36,11 @@ public:
     };
     explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
-               std::vector<double> & centroidsDistances,
-                CentroidsSum & centroidsSum,
-                CentroidsSumCount & centroidsSumCount)
+               std::vector<double> & centroidsDistances)
         :m_stop(false),
           m_pointDimensions(nullptr),
           m_centroids(centroids),
           m_centroidsDistances(centroidsDistances),
-          m_centroidsSum(centroidsSum),
-          m_centroidsSumCount(centroidsSumCount),
           readyMask(0),
           act(0),
           m_taskType(TASK_TYPE_COMPUTE)
@@ -75,27 +71,9 @@ public:
                                 maxOperations = ((i+1)*numOperations);
                             }
 
-                            if(m_taskType == TASK_TYPE_COMPUTE)
+                            for(int j = i*numOperations; j < maxOperations; ++j )
                             {
-
-                                for(int j = i*numOperations; j < maxOperations; ++j )
-                                {
-                                    m_centroidsDistances[j] = tpCompute(m_pointDimensions, m_centroids[j]);
-                                }
-                            }
-                            else
-                            {
-                                for(int j = i*numOperations; j < maxOperations; ++j )
-                                {
-                                    auto centroidSumDimension = m_centroidsSum[j].cbegin();
-                                    auto centroidDimension = m_centroids[j].begin();
-
-                                    for(; centroidSumDimension != m_centroidsSum[j].cend();
-                                        ++centroidSumDimension, ++centroidDimension)
-                                    {
-                                        *centroidDimension = *centroidSumDimension / m_centroidsSumCount[j];
-                                    }
-                                }
+                                m_centroidsDistances[j] = tpCompute(m_pointDimensions, m_centroids[j]);
                             }
 
                             std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed );
@@ -148,8 +126,6 @@ private:
     std::vector<double> * m_pointDimensions;
     CentroidsType & m_centroids;
     std::vector<double> & m_centroidsDistances;
-    CentroidsSum & m_centroidsSum;
-    CentroidsSumCount & m_centroidsSumCount;
 
     uint32_t readyMask;
     std::atomic<uint32_t> act;

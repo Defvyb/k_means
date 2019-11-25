@@ -40,10 +40,12 @@ private:
     bool inspectFile() noexcept;
     bool doClustering(CentroidsType & centroids) noexcept;
 
-    bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf, CentroidsType & centroids,
-                        CentroidsSum & centroidsSum,
+    bool calcCentroids(char * lineBuf,
+                        std::vector<double> & curPointBuf,
+                        CentroidsType & centroids,
                         CentroidsSumCount & centroidsSumCount,
-                        std::vector<double> & dists) noexcept;
+                        std::vector<double> & dists,
+                        CentroidsType & centroidsNext) noexcept;
     void initCentroids(CentroidsSum & centroidsSum,
                        CentroidsSumCount & centroidsSumCount,
                        const CentroidsType & centroids) noexcept;
