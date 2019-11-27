@@ -17,6 +17,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 set(CMAKE_CXX_FLAGS "-Ofast")
 
+
+
 find_package(GTest)
 if(GTest_FOUND)
     enable_testing()

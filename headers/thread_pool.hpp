@@ -6,7 +6,7 @@
 #include <atomic>
 #include <math.h>
 #include <types.h>
-
+#include <algorithm>
 
 static inline double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
@@ -29,25 +29,17 @@ class ThreadPool final
 {
 public:
 
-    enum TaskType
-    {
-      TASK_TYPE_COMPUTE,
-      TASK_TYPE_MOVE
-    };
     explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
-               std::vector<double> & centroidsDistances,
                 CentroidsSum & centroidsSum,
                 CentroidsSumCount & centroidsSumCount)
         :m_stop(false),
           m_pointDimensions(nullptr),
           m_centroids(centroids),
-          m_centroidsDistances(centroidsDistances),
           m_centroidsSum(centroidsSum),
           m_centroidsSumCount(centroidsSumCount),
           readyMask(0),
-          act(0),
-          m_taskType(TASK_TYPE_COMPUTE)
+          act(0)
     {
         for(int i=0; i<threads; ++i)
         {
@@ -57,46 +49,64 @@ public:
         int size = m_centroids.size();
         int numOperations = size/threads;
 
+        m_positions.resize(threads);
+        m_minValues.resize(threads);
+
         for(size_t i = 0; i<threads ;++i)
+        {
+            int maxOperations = 0;
+            if(i+1 == threads)
+            {
+                maxOperations = size;
+            }
+            else
+            {
+                maxOperations = ((i+1)*numOperations);
+            }
+
             workers.emplace_back(
-                [this, i, threads, size, numOperations]
+                [this, i, numOperations, maxOperations]
                 {
                     for(;;)
                     {
                         if( act.load(std::memory_order_relaxed) & (1U << i))
                         {
-                            int maxOperations = 0;
-                            if(i+1 == threads)
-                            {
-                                maxOperations = size;
-                            }
-                            else
-                            {
-                                maxOperations = ((i+1)*numOperations);
-                            }
 
-                            if(m_taskType == TASK_TYPE_COMPUTE)
+                            if(m_isFirstPoint)
                             {
-
-                                for(int j = i*numOperations; j < maxOperations; ++j )
+                                if(!std::all_of(m_centroidsSumCount.begin(),
+                                                m_centroidsSumCount.end(),
+                                                [](double val) { return val==0; }))
                                 {
-                                    m_centroidsDistances[j] = tpCompute(m_pointDimensions, m_centroids[j]);
-                                }
-                            }
-                            else
-                            {
-                                for(int j = i*numOperations; j < maxOperations; ++j )
-                                {
-                                    auto centroidSumDimension = m_centroidsSum[j].cbegin();
-                                    auto centroidDimension = m_centroids[j].begin();
-
-                                    for(; centroidSumDimension != m_centroidsSum[j].cend();
-                                        ++centroidSumDimension, ++centroidDimension)
+                                    for(int j = i*numOperations; j < maxOperations; ++j )
                                     {
-                                        *centroidDimension = *centroidSumDimension / m_centroidsSumCount[j];
+                                        std::transform(m_centroidsSum[j].cbegin(),
+                                                       m_centroidsSum[j].cend(),
+                                                       m_centroids[j].begin(),
+                                                       [this, j](double centroidSumDimension)
+                                        {
+                                            return centroidSumDimension /  m_centroidsSumCount[j];
+                                        });
+
+                                        m_centroidsSumCount[j] = 1.0;
+                                        std::copy(m_centroids[j].begin(), m_centroids[j].end(), m_centroidsSum[j].begin());
                                     }
+
                                 }
                             }
+
+                            double curDistance = 0;
+                            m_minValues[i] = std::numeric_limits<double>::max();
+                            for(int j = i*numOperations; j < maxOperations; ++j )
+                            {
+                                curDistance = tpCompute(m_pointDimensions, m_centroids[j]);
+                                if(m_minValues[i] > curDistance)
+                                {
+                                    m_minValues[i] = curDistance;
+                                    m_positions[i] = j;
+                                }
+                            }
+
 
                             std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed );
                         }
@@ -105,6 +115,7 @@ public:
 
                 }
             );
+        }
     }
 
     ThreadPool(ThreadPool const&) = delete;
@@ -122,22 +133,28 @@ public:
     }
 
 
-    void startCompute(std::vector<double> & pointDimensions)
+    void startCompute(std::vector<double> & pointDimensions, bool isFirstPoint)
     {
-        m_taskType = TASK_TYPE_COMPUTE;
+        m_isFirstPoint = isFirstPoint;
         m_pointDimensions = &pointDimensions;
         act.store(readyMask, std::memory_order_relaxed);
     }
 
-    void startMove()
-    {
-        m_taskType = TASK_TYPE_MOVE;
-        act.store(readyMask, std::memory_order_relaxed);
-    }
 
     bool ready()
     {
-       return act.load(std::memory_order_relaxed) == 0;
+       if(act.load(std::memory_order_relaxed) != 0) return false;
+       int foundCentroid = m_positions[std::min_element(m_minValues.cbegin(),m_minValues.cend()) - m_minValues.cbegin()];
+
+       std::transform(m_centroidsSum[foundCentroid].cbegin(),
+                      m_centroidsSum[foundCentroid].cend(),
+                      m_pointDimensions->cbegin(),
+                      m_centroidsSum[foundCentroid].begin(),
+                      std::plus<double>());
+
+
+       m_centroidsSumCount[foundCentroid]++;
+       return true;
     }
 
 
@@ -147,13 +164,14 @@ private:
     std::atomic<bool> m_stop;
     std::vector<double> * m_pointDimensions;
     CentroidsType & m_centroids;
-    std::vector<double> & m_centroidsDistances;
+    std::vector<int> m_positions;
+    std::vector<double> m_minValues;
     CentroidsSum & m_centroidsSum;
     CentroidsSumCount & m_centroidsSumCount;
+    bool m_isFirstPoint;
 
     uint32_t readyMask;
     std::atomic<uint32_t> act;
-    TaskType m_taskType;
 };
 
 
