@@ -63,12 +63,7 @@ bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
     if(!inspectFile()) return false;
     if(!m_startCentroidsObtainer(centroids, m_options, m_lineCount)) return false;
-
-    auto t1 = std::chrono::high_resolution_clock::now();
     if(!doClustering(centroids)) return false;
-    auto t2 = std::chrono::high_resolution_clock::now();
-    m_stat.m_duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-
 
     return true;
 }
@@ -159,67 +154,26 @@ void KMeans::moveCentroids(CentroidsSum & centroidsSum,
 }
 
 bool KMeans::calcCentroids(char * lineBuf,
-                           std::vector<double> & curPointBuf,
-                           CentroidsType & centroids,
-                           CentroidsSum & centroidsSum,
-                           CentroidsSumCount & centroidsSumCount) noexcept
+                           std::vector<double> & curPointBuf) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, std::ios_base::beg);
 
-    if(m_options.threadPoolSize == 1)
-    {
-        initCentroids(centroidsSum, centroidsSumCount, centroids);
-    }
-
-
+    m_pool->iterationInit();
     bool isFirstLine = true;
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
         if(parsePoint(lineBuf, curPointBuf))
         {
-
-            int foundCentroid = 0;
-            double minDistance = std::numeric_limits<double>::max();
-            double curDistance = 0;
-            if(m_options.threadPoolSize == 1)
-            {
-                for(int i = 0; i < centroids.size(); ++i )
-                {
-                    curDistance = tpCompute(&curPointBuf, centroids[i]);
-                    if(minDistance > curDistance)
-                    {
-                        minDistance = curDistance;
-                        foundCentroid = i;
-                    }
-                }
-                std::transform(centroidsSum[foundCentroid].cbegin(),
-                               centroidsSum[foundCentroid].cend(),
-                               curPointBuf.cbegin(),
-                               centroidsSum[foundCentroid].begin(),
-                               std::plus<double>());
-
-
-                centroidsSumCount[foundCentroid]++;
-            }
-            else
-            {
-                m_pool->startCompute(curPointBuf, isFirstLine);
-                while(!m_pool->ready());
-            }
-
+            m_pool->startCompute(curPointBuf, isFirstLine);
+            while(!m_pool->ready());
         }
         else
         {
             std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
             return false;
         }
-        isFirstLine = false;
-    }
-
-    if(m_options.threadPoolSize == 1)
-    {
-        moveCentroids(centroidsSum, centroidsSumCount, centroids);
+        if(isFirstLine) isFirstLine = false;
     }
 
     return true;
@@ -233,9 +187,6 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
     std::vector<double> curPoint;
     curPoint.reserve(1000);
 
-    CentroidsType centroidsNext;
-    centroidsNext = centroids;
-
     m_iterations = 0;
 
     CentroidsSum centroidsSum;
@@ -246,33 +197,30 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
 
     initCentroids(centroidsSum, centroidsSumCount, centroids);
 
-
-    if(m_options.threadPoolSize > 1 )
+    if(m_pool)
     {
-        if(m_pool)
-        {
-            delete m_pool;
-            m_pool = nullptr;
-        }
-        m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsSum, centroidsSumCount);
+        delete m_pool;
+        m_pool = nullptr;
     }
+    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsSum, centroidsSumCount);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     while(true)
     {
-        if(!calcCentroids(lineBuf, curPoint, centroids, centroidsSum, centroidsSumCount)) return false;
-
+        if(!calcCentroids(lineBuf, curPoint)) return false;
         m_iterations++;
         if(m_iterations >= m_options.maxIterations) break;
-        if(centroids == centroidsNext && m_iterations > 2)
+        if(m_pool->centroidsIsNotMoving() && m_iterations > 2)
         {
             break;
         }
-        else
-        {
-            centroidsNext = centroids;
-        }
     }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    m_stat.m_duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     m_stat.m_iterations = m_iterations;
+
     return true;
 }
 

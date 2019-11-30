@@ -41,19 +41,17 @@ public:
           readyMask(0),
           act(0)
     {
-        for(int i=0; i<threads; ++i)
-        {
-            readyMask |= 1<<i;
-        }
-
         int size = m_centroids.size();
         int numOperations = size/threads;
 
         m_positions.resize(threads);
         m_minValues.resize(threads);
+        m_isEq.resize(threads);
 
         for(size_t i = 0; i<threads ;++i)
         {
+            readyMask |= 1<<i;
+
             int maxOperations = 0;
             if(i+1 == threads)
             {
@@ -69,7 +67,7 @@ public:
                 {
                     for(;;)
                     {
-                        if( act.load(std::memory_order_relaxed) & (1U << i))
+                        if(act.load(std::memory_order_relaxed) & (1U << i))
                         {
 
                             if(m_isFirstPoint)
@@ -82,10 +80,16 @@ public:
                                     {
                                         std::transform(m_centroidsSum[j].cbegin(),
                                                        m_centroidsSum[j].cend(),
+                                                       m_centroids[j].cbegin(),
                                                        m_centroids[j].begin(),
-                                                       [this, j](double centroidSumDimension)
+                                                       [this, i, j](double centroidSumDimension, double centroidDimension)
                                         {
-                                            return centroidSumDimension /  m_centroidsSumCount[j];
+                                            double newDim = centroidSumDimension /  m_centroidsSumCount[j];
+                                            if(m_isEq[i] && newDim != centroidDimension)
+                                            {
+                                                m_isEq[i] = false;
+                                            }
+                                            return newDim;
                                         });
 
                                         m_centroidsSumCount[j] = 1.0;
@@ -133,6 +137,18 @@ public:
     }
 
 
+    void iterationInit()
+    {
+        m_isEq.assign(m_isEq.size(), true);
+    }
+
+    bool centroidsIsNotMoving()
+    {
+        return std::all_of(m_isEq.begin(),
+                               m_isEq.end(),
+                               [](bool val) { return val==true; });
+    }
+
     void startCompute(std::vector<double> & pointDimensions, bool isFirstPoint)
     {
         m_isFirstPoint = isFirstPoint;
@@ -166,6 +182,7 @@ private:
     CentroidsType & m_centroids;
     std::vector<int> m_positions;
     std::vector<double> m_minValues;
+    std::vector<bool> m_isEq;
     CentroidsSum & m_centroidsSum;
     CentroidsSumCount & m_centroidsSumCount;
     bool m_isFirstPoint;
