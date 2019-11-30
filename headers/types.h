@@ -27,4 +27,6 @@ typedef std::vector<double> CentroidsSumCount;
 typedef std::function<bool (CentroidsType & , ProgramOptions & , int ) > StartCentroidsObtainer;
 
 
+typedef int MinimumCentroidPosition;
+
 #endif
