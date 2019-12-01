@@ -7,14 +7,15 @@
 #include <math.h>
 #include <types.h>
 #include <algorithm>
-
-static inline double tpCompute(const std::vector<double> * pointDimensions, const std::vector<double> & centerDimentions ) noexcept
+#include <parser.hpp>
+static inline double tpCompute(const std::vector<double> & pointDimensions, const std::vector<double> & centerDimentions ) noexcept
 {
-    auto pointDim = pointDimensions->cbegin();
+    auto pointDim = pointDimensions.cbegin();
     auto centerDim = centerDimentions.cbegin();
 
     double sumOfPow = 0;
-    for(;pointDim != pointDimensions->cend();
+
+    for(;pointDim != pointDimensions.cend();
         ++pointDim, ++centerDim)
     {
         sumOfPow += pow((*pointDim - *centerDim),2.0);
@@ -31,17 +32,19 @@ public:
     explicit ThreadPool(size_t threads,
                CentroidsType  & centroids,
                 CentroidsSum & centroidsSum,
-                CentroidsSumCount & centroidsSumCount)
+                CentroidsSumCount & centroidsSumCount,
+                int dimensions)
         :m_stop(false),
-          m_pointDimensions(nullptr),
           m_centroids(centroids),
           m_centroidsSum(centroidsSum),
           m_centroidsSumCount(centroidsSumCount),
           readyMask(0),
-          act(0)
+          act(0),
+          parse(true)
     {
         int size = m_centroids.size();
         int numOperations = size/threads;
+        m_pointDimensions.resize(dimensions);
 
         m_positions.resize(threads);
         m_minValues.resize(threads);
@@ -62,14 +65,32 @@ public:
             }
 
             workers.emplace_back(
-                [this, i, numOperations, maxOperations]
+                [this, i, numOperations, maxOperations, threads]
                 {
                     for(;;)
                     {
                         if(act.load(std::memory_order_relaxed) & (1U << i))
                         {
+                            if(parse) // parse line concurently
+                            {
+                                int pointsCount = 0;
+                                double result = 0;
+                                bool noResult = true;
+                                const char* linePtr = m_lineBuf;
+                                while (*linePtr != '\0')
+                                {
+                                    result = getEachDouble(linePtr, i, threads-1, noResult);
+                                    if(!noResult)
+                                    {
+                                        m_pointDimensions[i + pointsCount*threads] = result;
+                                    }
+                                    pointsCount++;
+                                }
+                                std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed);
+                                continue;
+                            }
 
-                            if(m_isFirstPoint)
+                            if(m_isFirstPoint) // move centroids
                             {
                                 if(!std::all_of(m_centroidsSumCount.begin(),
                                                 m_centroidsSumCount.end(),
@@ -98,7 +119,7 @@ public:
                                 }
                             }
 
-                            double curDistance = 0;
+                            double curDistance = 0; // calculate distances for each centroid
                             m_minValues[i] = std::numeric_limits<double>::max();
                             for(int j = i*numOperations; j < maxOperations; ++j )
                             {
@@ -148,10 +169,16 @@ public:
                                [](bool val) { return val==true; });
     }
 
-    void startCompute(std::vector<double> & pointDimensions, bool isFirstPoint)
+    void startCompute(char * lineBuf, bool isFirstPoint)
     {
         m_isFirstPoint = isFirstPoint;
-        m_pointDimensions = &pointDimensions;
+        m_lineBuf = lineBuf;
+
+        parse = true;
+        act.store(readyMask, std::memory_order_relaxed);
+        while(act.load(std::memory_order_relaxed) != 0);
+
+        parse = false;
         act.store(readyMask, std::memory_order_relaxed);
     }
 
@@ -159,11 +186,12 @@ public:
     bool ready()
     {
        if(act.load(std::memory_order_relaxed) != 0) return false;
+
        int foundCentroid = m_positions[std::min_element(m_minValues.cbegin(),m_minValues.cend()) - m_minValues.cbegin()];
 
        std::transform(m_centroidsSum[foundCentroid].cbegin(),
                       m_centroidsSum[foundCentroid].cend(),
-                      m_pointDimensions->cbegin(),
+                      m_pointDimensions.cbegin(),
                       m_centroidsSum[foundCentroid].begin(),
                       std::plus<double>());
 
@@ -177,7 +205,8 @@ public:
 private:
     std::vector<std::thread> workers;
     std::atomic<bool> m_stop;
-    std::vector<double> * m_pointDimensions;
+    char * m_lineBuf;
+    std::vector<double> m_pointDimensions;
     CentroidsType & m_centroids;
     std::vector<int> m_positions;
     std::vector<double> m_minValues;
@@ -188,6 +217,7 @@ private:
 
     uint32_t readyMask;
     std::atomic<uint32_t> act;
+    bool parse;
 };
 
 

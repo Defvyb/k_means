@@ -15,5 +15,6 @@ target_link_libraries(${PROJECT_NAME} ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES}
 add_test(
     NAME ${PROJECT_NAME}
     COMMAND ${PROJECT_NAME}
+    --gtest_output=xml:gtest.xml
 )
 

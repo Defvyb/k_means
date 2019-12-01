@@ -51,6 +51,115 @@ TEST(KMeansTest, direct_cast_2Dim_1th)
 
 }
 
+TEST(ParserTest, getEachDoubleOne)
+{
+    std::string testString = "1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8\0";
+    std::vector<double>  doubles;
+    bool noResult;
+    doubles.clear();
+
+    const char* p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 0, 0, noResult));
+    }
+    ASSERT_EQ(1.1, doubles.front());
+    ASSERT_EQ(1.8, doubles.back());
+    ASSERT_EQ(8, doubles.size());
+}
+
+TEST(ParserTest, getEachDoubleTest)
+{
+    std::string testString = "1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8\0";
+    std::vector<double>  doubles;
+    bool noResult;
+    doubles.clear();
+
+    const char* p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 0, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.1, doubles.front());
+    ASSERT_DOUBLE_EQ(1.5, doubles.back());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 1, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.2, doubles.front());
+    ASSERT_DOUBLE_EQ(1.6, doubles.back());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 2, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.3, doubles.front());
+    ASSERT_DOUBLE_EQ(1.7, doubles.back());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 3, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.4, doubles.front());
+    ASSERT_DOUBLE_EQ(1.8, doubles.back());
+}
+
+TEST(ParserTest, getEachDoubleEmpty)
+{
+    bool noResult;
+    std::string testString = "";
+    const char* p = testString.c_str();
+    ASSERT_DOUBLE_EQ(0, getEachDouble(p, 1, 3, noResult));
+}
+
+TEST(ParserTest, getEachDoubleAssymethric)
+{
+    bool noResult;
+    std::string testString = "1.1 1.2 1.3 1.4 1.5 1.6\0";
+    std::vector<double>  doubles;
+
+    doubles.clear();
+
+    const char* p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 0, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.1, doubles.front());
+    ASSERT_DOUBLE_EQ(1.5, doubles.back());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 1, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.2, doubles.front());
+    ASSERT_DOUBLE_EQ(1.6, doubles.back());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 2, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.3, doubles.front());
+
+    doubles.clear();
+    p = testString.c_str();
+    while (*p != '\0')
+    {
+        doubles.push_back(getEachDouble(p, 3, 3, noResult));
+    }
+    ASSERT_DOUBLE_EQ(1.4, doubles.front());
+}
 
 
 TEST(ParserTest, direct_negative_number1)
@@ -59,7 +168,7 @@ TEST(ParserTest, direct_negative_number1)
     std::string str = "-1.111";
     ASSERT_TRUE(parsePoint(str.c_str(), outVect));
 
-   ASSERT_EQ(-1.111, outVect.front());
+   ASSERT_DOUBLE_EQ(-1.111, outVect.front());
 }
 
 TEST(ParserTest, direct_case1)
@@ -68,7 +177,7 @@ TEST(ParserTest, direct_case1)
     std::string str = "1.1";
     ASSERT_TRUE(parsePoint(str.c_str(), outVect));
 
-   ASSERT_EQ(1.1, outVect.front());
+   ASSERT_DOUBLE_EQ(1.1, outVect.front());
 }
 
 TEST(ParserTest, direct_case2)
@@ -77,8 +186,8 @@ TEST(ParserTest, direct_case2)
     const char str[] = "1.1 200\0";
     ASSERT_TRUE(parsePoint(str, outVect));
 
-   ASSERT_EQ(1.1, outVect.front());
-   ASSERT_EQ(200, outVect.back());
+   ASSERT_DOUBLE_EQ(1.1, outVect.front());
+   ASSERT_DOUBLE_EQ(200, outVect.back());
 }
 
 TEST(ParserTest, direct_case1000)
