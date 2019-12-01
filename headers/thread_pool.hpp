@@ -13,8 +13,7 @@ static inline double tpCompute(const std::vector<double> * pointDimensions, cons
     auto pointDim = pointDimensions->cbegin();
     auto centerDim = centerDimentions.cbegin();
 
-    static double sumOfPow;
-    sumOfPow=0;
+    double sumOfPow = 0;
     for(;pointDim != pointDimensions->cend();
         ++pointDim, ++centerDim)
     {
