@@ -5,6 +5,68 @@
 #include <iostream>
 #include <types.h>
 #include <math.h>
+
+static inline double getEachDouble(const char *& p, int num, int count, bool & noResult)
+{
+    noResult = true;
+    count -=num;
+    while(num)
+    {
+        if(*p != ' ')
+        {
+            num--;
+            while(*p != ' ' && *p != '\0') p++;
+        }
+        else
+        {
+            p++;
+        }
+    }
+    while(*p == ' ' ) p++;
+
+    double r;
+    r=0.0;
+    bool neg = false;
+    if (*p == '-') {
+        neg = true;
+        ++p;
+        if(noResult) noResult = false;
+    }
+    while (*p >= '0' && *p <= '9') {
+        r = (r*10.0) + (*p - '0');
+        ++p;
+        if(noResult) noResult = false;
+    }
+    if (*p == '.') {
+        double f = 0.0;
+        int n = 0;
+        ++p;
+        while (*p >= '0' && *p <= '9') {
+            f = (f*10.0) + (*p - '0');
+            ++p;
+            ++n;
+        }
+        r += f / std::pow(10.0, n);
+    }
+    if (neg) {
+        r = -r;
+    }
+
+    while(count)
+    {
+        if(*p != ' ')
+        {
+            count--;
+            while(*p != ' ' && *p != '\0') p++;
+        }
+        else
+        {
+            p++;
+        }
+    }
+    return r;
+}
+
 static inline double getDouble(const char *& p)
 {
     while(*p == ' ') p++;
@@ -42,9 +104,9 @@ static inline bool parsePoint(const char * string, std::vector<double> & pointDi
 
     const char* p = string;
     while (*p != '\0')
-       {
-           pointDimensions.push_back(getDouble(p));
-       }
+    {
+        pointDimensions.push_back(getDouble(p));
+    }
     return !pointDimensions.empty();
 }
 

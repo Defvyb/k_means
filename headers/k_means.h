@@ -37,8 +37,8 @@ class KMeans final
 
 private:
     ProgramOptions & m_options;
-    bool inspectFile() noexcept;
-    bool doClustering(CentroidsType & centroids) noexcept;
+    bool inspectFile(int & dimensionsCount) noexcept;
+    bool doClustering(CentroidsType & centroids, int dimensionsCount) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf) noexcept;
     void initCentroids(CentroidsSum & centroidsSum,

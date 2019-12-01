@@ -61,21 +61,22 @@ bool KMeans::defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, Prog
 
 bool KMeans::clustering(CentroidsType & centroids) noexcept
 {
-    if(!inspectFile()) return false;
+    int dimensionsCount = 0;
+    if(!inspectFile(dimensionsCount)) return false;
     if(!m_startCentroidsObtainer(centroids, m_options, m_lineCount)) return false;
-    if(!doClustering(centroids)) return false;
+    if(!doClustering(centroids, dimensionsCount)) return false;
 
     return true;
 }
 
-bool KMeans::inspectFile() noexcept
+bool KMeans::inspectFile(int & dimensionsCount) noexcept
 {
     m_options.fstream.seekg(0, std::ios::beg);
     m_lineCount = 0;
 
     char line[MAX_LINE_LENGTH];
 
-    int elementsCount = 0;
+    dimensionsCount = 0;
     std::vector<double> pointDimensions;
     pointDimensions.reserve(1000);
 
@@ -87,13 +88,13 @@ bool KMeans::inspectFile() noexcept
 
         if(parsePointFunc(line, pointDimensions))
         {
-            if(!elementsCount)
+            if(!dimensionsCount)
             {
-                elementsCount = pointDimensions.size();
+                dimensionsCount = pointDimensions.size();
             }
             else
             {
-                if(elementsCount != pointDimensions.size())
+                if(dimensionsCount != pointDimensions.size())
                 {
                     std::cerr << "ERROR: file format error, line: " <<m_lineCount << " text: " << line<< "\n" ;
                     return false;
@@ -163,16 +164,9 @@ bool KMeans::calcCentroids(char * lineBuf,
     bool isFirstLine = true;
     while (m_options.fstream.getline(lineBuf, MAX_LINE_LENGTH))
     {
-        if(parsePoint(lineBuf, curPointBuf))
-        {
-            m_pool->startCompute(curPointBuf, isFirstLine);
-            while(!m_pool->ready());
-        }
-        else
-        {
-            std::cerr << "failed to parse point, text: " << lineBuf <<"\n";
-            return false;
-        }
+        m_pool->startCompute(lineBuf, isFirstLine);
+        while(!m_pool->ready());
+
         if(isFirstLine) isFirstLine = false;
     }
 
@@ -180,7 +174,7 @@ bool KMeans::calcCentroids(char * lineBuf,
 }
 
 
-bool KMeans::doClustering(CentroidsType & centroids) noexcept
+bool KMeans::doClustering(CentroidsType & centroids,int dimensionsCount) noexcept
 {
     static char lineBuf[MAX_LINE_LENGTH] ={0};
 
@@ -202,7 +196,7 @@ bool KMeans::doClustering(CentroidsType & centroids) noexcept
         delete m_pool;
         m_pool = nullptr;
     }
-    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsSum, centroidsSumCount);
+    m_pool = new ThreadPool(m_options.threadPoolSize, centroids, centroidsSum, centroidsSumCount, dimensionsCount);
 
     auto t1 = std::chrono::high_resolution_clock::now();
 
