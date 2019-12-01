@@ -24,8 +24,7 @@ static inline double getEachDouble(const char *& p, int num, int count, bool & n
     }
     while(*p == ' ' ) p++;
 
-    double r;
-    r=0.0;
+    double r=0.0;
     bool neg = false;
     if (*p == '-') {
         neg = true;
@@ -70,8 +69,7 @@ static inline double getEachDouble(const char *& p, int num, int count, bool & n
 static inline double getDouble(const char *& p)
 {
     while(*p == ' ') p++;
-    static double r;
-    r=0.0;
+    double r=0.0;
     bool neg = false;
     if (*p == '-') {
         neg = true;
@@ -82,8 +80,7 @@ static inline double getDouble(const char *& p)
         ++p;
     }
     if (*p == '.') {
-        static double f;
-        f = 0.0;
+        double f = 0.0;
         int n = 0;
         ++p;
         while (*p >= '0' && *p <= '9') {

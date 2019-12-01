@@ -41,12 +41,9 @@ private:
     bool doClustering(CentroidsType & centroids, int dimensionsCount) noexcept;
 
     bool calcCentroids(char * lineBuf, std::vector<double> & curPointBuf) noexcept;
-    void initCentroids(CentroidsSum & centroidsSum,
+    void initCentroidsSum(CentroidsSum & centroidsSum,
                        CentroidsSumCount & centroidsSumCount,
                        const CentroidsType & centroids) noexcept;
-    void moveCentroids(CentroidsSum & centroidsSum,
-                       CentroidsSumCount & centroidsSumCount,
-                       CentroidsType & centroids) noexcept;
 
     static bool defaultKMeansStartCentroidsObtainer(CentroidsType & centroids, ProgramOptions & options, int lineCount) noexcept;
 

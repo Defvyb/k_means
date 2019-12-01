@@ -129,7 +129,7 @@ Stat KMeans::getStat() const noexcept
 }
 
 
-void KMeans::initCentroids(CentroidsSum & centroidsSum,
+void KMeans::initCentroidsSum(CentroidsSum & centroidsSum,
                            CentroidsSumCount & centroidsSumCount,
                            const CentroidsType & centroids) noexcept
 {
@@ -137,25 +137,7 @@ void KMeans::initCentroids(CentroidsSum & centroidsSum,
     centroidsSumCount.assign(centroids.size(), 1.0);
 }
 
-void KMeans::moveCentroids(CentroidsSum & centroidsSum,
-                           CentroidsSumCount & centroidsSumCount,
-                      CentroidsType & centroids) noexcept
-{
-    for(int i=0; i < centroids.size(); ++i)
-    {        
-        std::transform(centroidsSum[i].cbegin(),
-                       centroidsSum[i].cend(),
-                       centroids[i].begin(),
-                       [&centroidsSumCount, i](double centroidSumDimension)
-        {
-            return centroidSumDimension /  centroidsSumCount[i];
-        });
-
-    }
-}
-
-bool KMeans::calcCentroids(char * lineBuf,
-                           std::vector<double> & curPointBuf) noexcept
+bool KMeans::calcCentroids(char * lineBuf, std::vector<double> & curPointBuf) noexcept
 {
     m_options.fstream.clear();
     m_options.fstream.seekg(0, std::ios_base::beg);
@@ -166,7 +148,6 @@ bool KMeans::calcCentroids(char * lineBuf,
     {
         m_pool->startCompute(lineBuf, isFirstLine);
         while(!m_pool->ready());
-
         if(isFirstLine) isFirstLine = false;
     }
 
@@ -176,7 +157,7 @@ bool KMeans::calcCentroids(char * lineBuf,
 
 bool KMeans::doClustering(CentroidsType & centroids,int dimensionsCount) noexcept
 {
-    static char lineBuf[MAX_LINE_LENGTH] ={0};
+    char lineBuf[MAX_LINE_LENGTH] ={0};
 
     std::vector<double> curPoint;
     curPoint.reserve(1000);
@@ -189,7 +170,7 @@ bool KMeans::doClustering(CentroidsType & centroids,int dimensionsCount) noexcep
     centroidsSum.resize(centroids.size());
     centroidsSumCount.resize(centroids.size());
 
-    initCentroids(centroidsSum, centroidsSumCount, centroids);
+    initCentroidsSum(centroidsSum, centroidsSumCount, centroids);
 
     if(m_pool)
     {

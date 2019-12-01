@@ -43,7 +43,6 @@ public:
     {
         int size = m_centroids.size();
         int numOperations = size/threads;
-        m_lineBuf.resize(threads);
         m_pointDimensions.resize(dimensions);
 
         m_positions.resize(threads);
@@ -69,28 +68,28 @@ public:
                 {
                     for(;;)
                     {
-                        if(act.load(std::memory_order_acquire) & (1U << i))
+                        if(act.load(std::memory_order_relaxed) & (1U << i))
                         {
-                            if(parse)
+                            if(parse) // parse line concurently
                             {
-                                const char* p = m_lineBuf[i].c_str();
                                 int pointsCount = 0;
                                 double result = 0;
                                 bool noResult = true;
-                                while (*p != '\0')
+                                const char* linePtr = m_lineBuf;
+                                while (*linePtr != '\0')
                                 {
-                                    result = getEachDouble(p, i, threads-1, noResult);
+                                    result = getEachDouble(linePtr, i, threads-1, noResult);
                                     if(!noResult)
                                     {
                                         m_pointDimensions[i + pointsCount*threads] = result;
                                     }
                                     pointsCount++;
                                 }
-                                std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_release);
+                                std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed);
                                 continue;
                             }
 
-                            if(m_isFirstPoint)
+                            if(m_isFirstPoint) // move centroids
                             {
                                 if(!std::all_of(m_centroidsSumCount.begin(),
                                                 m_centroidsSumCount.end(),
@@ -119,8 +118,7 @@ public:
                                 }
                             }
 
-                            while(act.load(std::memory_order_acquire) == 0);
-                            double curDistance = 0;
+                            double curDistance = 0; // calculate distances for each centroid
                             m_minValues[i] = std::numeric_limits<double>::max();
                             for(int j = i*numOperations; j < maxOperations; ++j )
                             {
@@ -133,7 +131,7 @@ public:
                             }
 
 
-                            std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_release );
+                            std::atomic_fetch_xor_explicit(&act, (1U << i), std::memory_order_relaxed );
                         }
                         if(m_stop.load(std::memory_order_relaxed)) return;
                     }
@@ -173,21 +171,21 @@ public:
     void startCompute(char * lineBuf, bool isFirstPoint)
     {
         m_isFirstPoint = isFirstPoint;
-        m_lineBuf.assign(m_lineBuf.size(), lineBuf);
+        m_lineBuf = lineBuf;
 
         parse = true;
-        act.store(readyMask, std::memory_order_release);
-        while(act.load(std::memory_order_acquire) != 0);
+        act.store(readyMask, std::memory_order_relaxed);
+        while(act.load(std::memory_order_relaxed) != 0);
 
         parse = false;
-        act.store(readyMask, std::memory_order_release);
-
+        act.store(readyMask, std::memory_order_relaxed);
     }
 
 
     bool ready()
     {
-       if(act.load(std::memory_order_acquire) != 0) return false;
+       if(act.load(std::memory_order_relaxed) != 0) return false;
+
        int foundCentroid = m_positions[std::min_element(m_minValues.cbegin(),m_minValues.cend()) - m_minValues.cbegin()];
 
        std::transform(m_centroidsSum[foundCentroid].cbegin(),
@@ -206,7 +204,7 @@ public:
 private:
     std::vector<std::thread> workers;
     std::atomic<bool> m_stop;
-    std::vector<std::string> m_lineBuf;
+    char * m_lineBuf;
     std::vector<double> m_pointDimensions;
     CentroidsType & m_centroids;
     std::vector<int> m_positions;
